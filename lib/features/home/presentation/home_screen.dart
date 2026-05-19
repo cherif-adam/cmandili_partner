@@ -10,6 +10,8 @@ import '../../reports/presentation/reports_screen.dart';
 import '../../orders/providers/partner_orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/presentation/partner_onboarding_screen.dart';
+import '../../orders/providers/audio_alert_provider.dart';
+import '../../orders/data/models/order.dart';
 
 // Tracks shop open/closed state, synced to restaurants/supermarkets table.
 final _shopOpenProvider = StateNotifierProvider<_ShopOpenNotifier, bool?>((ref) {
@@ -62,6 +64,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(partnerProfileProvider);
     final l = AppLocalizations.of(context)!;
+
+    // Démarre l'écoute globale pour les alertes sonores de nouvelles commandes
+    ref.listen(orderAlertProvider, (_, __) {});
 
     return profileAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -453,7 +458,7 @@ class _DashboardTab extends ConsumerWidget {
                   final order = active[index];
                   return Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                    child: _buildOrderCard(context, order),
+                    child: _buildOrderCard(context, ref, order),
                   );
                 },
                 childCount: active.length > 3 ? 3 : active.length,
@@ -605,8 +610,10 @@ class _DashboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, dynamic order) {
+  Widget _buildOrderCard(BuildContext context, WidgetRef ref, dynamic order) {
     final statusColor = _statusColor(order.status);
+    final isPending = order.status == OrderStatus.pending;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -620,8 +627,11 @@ class _DashboardTab extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
           Container(
             width: 44,
             height: 44,
@@ -681,6 +691,77 @@ class _DashboardTab extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+      if (isPending) ...[
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => _showRejectDialog(context, ref, order),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Refuser'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  ref.read(partnerOrderRepositoryProvider).updateOrderStatus(order.id, OrderStatus.confirmed);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: 0,
+                ),
+                child: const Text('Accepter'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ],
+  ),
+);
+  }
+
+  void _showRejectDialog(BuildContext context, WidgetRef ref, dynamic order) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Refuser la commande'),
+        content: const Text('Êtes-vous sûr de vouloir refuser cette commande ? Cette action est irréversible.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(partnerOrderRepositoryProvider).updateOrderStatus(order.id, OrderStatus.cancelled);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sûr de refuser'),
           ),
         ],
       ),

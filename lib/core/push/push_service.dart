@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,9 +12,38 @@ const String _kAndroidChannelDesc = 'Notifications about your orders';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Lightweight — Firebase is already initialised by the OS here.
-  // Android displays `notification`-payload messages automatically using the
-  // default channel declared in the manifest, so we don't need to render here.
+  final type = message.data['type'] as String?;
+  if (type == 'new_order') {
+    final local = FlutterLocalNotificationsPlugin();
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings();
+    await local.initialize(const InitializationSettings(android: androidInit, iOS: iosInit));
+
+    final title = message.data['title'] as String? ?? 'Nouvelle commande !';
+    final body = message.data['body'] as String? ?? 'Vous avez une commande en attente.';
+    
+    local.show(
+      message.hashCode,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'cmandili_orders_urgent_2',
+          'Urgent Order updates',
+          channelDescription: 'Urgent notifications for new orders',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('new_order'),
+          additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentSound: true,
+          sound: 'new_order.wav', // Important: on iOS, needs to be .wav or .caf
+        ),
+      ),
+    );
+  }
 }
 
 class PushService {
@@ -53,6 +83,19 @@ class PushService {
           importance: Importance.high,
         ));
 
+    await _local
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(AndroidNotificationChannel(
+          'cmandili_orders_urgent_2',
+          'Urgent Order updates',
+          description: 'Urgent notifications for new orders',
+          importance: Importance.max,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('new_order'),
+          additionalFlags: Int32List.fromList([4]),
+        ));
+
     // Show heads-up alerts even while the app is in the foreground (iOS).
     await _fcm.setForegroundNotificationPresentationOptions(
       alert: true,
@@ -88,24 +131,32 @@ class PushService {
   }
 
   void _onForegroundMessage(RemoteMessage message) {
-    // Fall back to data-payload fields when a notification block is absent —
-    // the edge function may send pure-data pushes on some flows.
+    final type = message.data['type'] as String?;
     final title = message.notification?.title ?? message.data['title'] as String?;
     final body  = message.notification?.body  ?? message.data['body']  as String?;
     if (title == null && body == null) return;
+
+    final isUrgent = type == 'new_order';
+
     _local.show(
       message.hashCode,
       title,
       body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
-          _kAndroidChannelId,
-          _kAndroidChannelName,
+          isUrgent ? 'cmandili_orders_urgent_2' : _kAndroidChannelId,
+          isUrgent ? 'Urgent Order updates' : _kAndroidChannelName,
           channelDescription: _kAndroidChannelDesc,
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: isUrgent ? Importance.max : Importance.high,
+          priority: isUrgent ? Priority.high : Priority.high,
+          playSound: true,
+          sound: isUrgent ? const RawResourceAndroidNotificationSound('new_order') : null,
+          additionalFlags: isUrgent ? Int32List.fromList([4]) : null,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(
+          presentSound: true,
+          sound: isUrgent ? 'new_order.wav' : null,
+        ),
       ),
     );
   }

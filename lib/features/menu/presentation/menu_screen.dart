@@ -410,7 +410,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   }
 }
 
-class _MenuItemCard extends ConsumerWidget {
+class _MenuItemCard extends ConsumerStatefulWidget {
   final dynamic item;
   final bool isRestaurant;
   final String partnerType;
@@ -422,15 +422,103 @@ class _MenuItemCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MenuItemCard> createState() => _MenuItemCardState();
+}
+
+class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
+  late bool _isAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAvailability();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MenuItemCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item != widget.item) {
+      _initAvailability();
+    }
+  }
+
+  void _initAvailability() {
+    final fi = widget.item is FoodItem ? widget.item as FoodItem : null;
+    final gi = widget.item is GroceryItem ? widget.item as GroceryItem : null;
+    _isAvailable = fi?.isAvailable ?? gi?.isAvailable ?? true;
+  }
+
+  Future<void> _toggleAvailability(bool value) async {
+    final previousState = _isAvailable;
+    
+    // 1. Optimistic update
+    setState(() => _isAvailable = value);
+
+    final isFood = widget.item is FoodItem;
+    final isGrocery = widget.item is GroceryItem;
+    
+    final itemId = isFood ? (widget.item as FoodItem).id : 
+                   isGrocery ? (widget.item as GroceryItem).id : '';
+
+    if (itemId.isEmpty) {
+      if (mounted) {
+        setState(() => _isAvailable = previousState);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Erreur: ID introuvable', style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      // 2. Call backend
+      final repo = ref.read(menuRepositoryProvider);
+      final success = await repo.updateItemAvailability(
+        itemId, 
+        value, 
+        isGrocery: isGrocery,
+      );
+
+      // 3. Handle failure (Rollback)
+      if (!success) {
+        if (mounted) {
+          setState(() => _isAvailable = previousState);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Erreur: Impossible de mettre à jour la disponibilité', style: TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } else {
+        // Background silent refresh for global state
+        ref.invalidate(menuItemsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isAvailable = previousState);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e', style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final fi = item is FoodItem ? item as FoodItem : null;
-    final gi = item is GroceryItem ? item as GroceryItem : null;
+    final fi = widget.item is FoodItem ? widget.item as FoodItem : null;
+    final gi = widget.item is GroceryItem ? widget.item as GroceryItem : null;
 
     final name = fi?.name ?? gi?.name ?? '';
     final price = fi?.price ?? gi?.price ?? 0.0;
     final imageUrl = fi?.imageUrl ?? gi?.imageUrl ?? '';
-    final isAvailable = fi?.isAvailable ?? gi?.isAvailable ?? true;
     final category = fi?.category ??
         gi?.category.toString().split('.').last ??
         '';
@@ -558,17 +646,9 @@ class _MenuItemCard extends ConsumerWidget {
 
                 // Availability switch
                 Switch(
-                  value: isAvailable,
+                  value: _isAvailable,
                   activeColor: AppColors.primary,
-                  onChanged: (v) async {
-                    final repo = ref.read(menuRepositoryProvider);
-                    if (isRestaurant) {
-                      await repo.toggleFoodItemAvailability(itemId, v);
-                    } else {
-                      await repo.toggleGroceryItemAvailability(itemId, v);
-                    }
-                    ref.invalidate(menuItemsProvider);
-                  },
+                  onChanged: _toggleAvailability,
                 ),
               ],
             ),
@@ -593,7 +673,7 @@ class _MenuItemCard extends ConsumerWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => AddEditItemScreen(
-                        partnerType: partnerType,
+                        partnerType: widget.partnerType,
                         existingFoodItem: fi,
                         existingGroceryItem: gi,
                       ),
@@ -613,7 +693,7 @@ class _MenuItemCard extends ConsumerWidget {
                         itemId: itemId,
                         itemName: name,
                         originalPrice: price,
-                        isGrocery: !isRestaurant,
+                        isGrocery: !widget.isRestaurant,
                         currentDiscountPrice: discountPrice,
                         currentEndTime: discountEndTime != null ? DateTime.tryParse(discountEndTime!) : null,
                         currentQuantity: discountQuantity,
@@ -627,7 +707,7 @@ class _MenuItemCard extends ConsumerWidget {
                   icon: Icons.delete_outline_rounded,
                   label: l.deleteAction,
                   color: AppColors.error,
-                  onTap: () => _confirmDelete(context, ref, itemId, isRestaurant),
+                  onTap: () => _confirmDelete(context, ref, itemId, widget.isRestaurant),
                 ),
               ],
             ),

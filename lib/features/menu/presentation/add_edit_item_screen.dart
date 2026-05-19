@@ -46,6 +46,12 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
   bool _isLoading = false;
   GroceryCategory _selectedGroceryCategory = GroceryCategory.vegetables;
 
+  // Happy Hour
+  bool _isHappyHour = false;
+  late TextEditingController _happyHourPriceController;
+  TimeOfDay? _happyHourStart;
+  TimeOfDay? _happyHourEnd;
+
   File? _imageFile;
   final _picker = ImagePicker();
 
@@ -84,6 +90,24 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
     _isSpicy = fi?.isSpicy ?? false;
     _isOrganic = gi?.isOrganic ?? false;
 
+    // Happy Hour init
+    _isHappyHour = fi?.isHappyHour ?? false;
+    _happyHourPriceController = TextEditingController(
+        text: fi?.happyHourPrice?.toStringAsFixed(2) ?? '');
+    
+    TimeOfDay? parseTime(String? timeStr) {
+      if (timeStr == null || timeStr.isEmpty) return null;
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        return TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 0,
+            minute: int.tryParse(parts[1]) ?? 0);
+      }
+      return null;
+    }
+    _happyHourStart = parseTime(fi?.happyHourStart);
+    _happyHourEnd = parseTime(fi?.happyHourEnd);
+
     if (gi != null) _selectedGroceryCategory = gi.category;
 
     if (_isEditing) _loadVariants();
@@ -117,6 +141,7 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
     _imageUrlController.dispose();
     _prepTimeController.dispose();
     _unitController.dispose();
+    _happyHourPriceController.dispose();
     for (final v in _variants) {
       v.dispose();
     }
@@ -142,6 +167,31 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
       return;
     }
 
+    if (_isHappyHour) {
+      final hpText = _happyHourPriceController.text.trim();
+      final basePrice = double.tryParse(_priceController.text) ?? 0.0;
+      final hpPrice = double.tryParse(hpText);
+
+      if (hpText.isEmpty || hpPrice == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez entrer un prix valide pour l\'Happy Hour', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error)
+        );
+        return;
+      }
+      if (hpPrice >= basePrice) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Le prix Happy Hour doit être inférieur au prix normal', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error)
+        );
+        return;
+      }
+      if (_happyHourStart == null || _happyHourEnd == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez sélectionner l\'heure de début et de fin', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error)
+        );
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
     final repo = ref.read(menuRepositoryProvider);
     final profile = await ref.read(partnerProfileProvider.future);
@@ -155,6 +205,11 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
       if (url != null) {
         _imageUrlController.text = url;
       }
+    }
+
+    String _formatTime(TimeOfDay? time) {
+      if (time == null) return '';
+      return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
     }
 
     String? savedItemId;
@@ -171,6 +226,10 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
         preparationTime: int.tryParse(_prepTimeController.text) ?? 15,
         isVegetarian: _isVegetarian,
         isSpicy: _isSpicy,
+        isHappyHour: _isHappyHour,
+        happyHourPrice: _isHappyHour ? double.tryParse(_happyHourPriceController.text) : null,
+        happyHourStart: _isHappyHour ? _formatTime(_happyHourStart) : null,
+        happyHourEnd: _isHappyHour ? _formatTime(_happyHourEnd) : null,
       );
       if (_isEditing) {
         ok = await repo.updateFoodItem(item);
@@ -343,6 +402,8 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
+            const SizedBox(height: 24),
+            _buildHappyHourSection(),
             const SizedBox(height: 24),
             _sectionLabel(_isRestaurant ? 'Dish Details' : 'Product Details'),
             const SizedBox(height: 10),
@@ -950,6 +1011,126 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
           style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
       secondary: Icon(icon, color: AppColors.textSecondary, size: 22),
       contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  Widget _buildHappyHourSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _isHappyHour ? AppColors.primary.withOpacity(0.05) : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _isHappyHour ? AppColors.primary.withOpacity(0.3) : AppColors.textLight.withOpacity(0.15),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        children: [
+          SwitchListTile(
+            value: _isHappyHour,
+            onChanged: (v) => setState(() => _isHappyHour = v),
+            activeColor: AppColors.primary,
+            title: const Text('Activer Happy Hour',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            subtitle: const Text('Offre spéciale à durée limitée',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            secondary: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _isHappyHour ? AppColors.primary.withOpacity(0.1) : AppColors.background,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.celebration_outlined, 
+                  color: _isHappyHour ? AppColors.primary : AppColors.textSecondary),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+          if (_isHappyHour) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _field(
+                    _happyHourPriceController,
+                    'Prix Happy Hour (DT)',
+                    Icons.sell_outlined,
+                    inputType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _timePickerField(
+                          'Heure de début',
+                          _happyHourStart,
+                          (t) => setState(() => _happyHourStart = t),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _timePickerField(
+                          'Heure de fin',
+                          _happyHourEnd,
+                          (t) => setState(() => _happyHourEnd = t),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _timePickerField(String label, TimeOfDay? time, ValueChanged<TimeOfDay> onSelected) {
+    return GestureDetector(
+      onTap: () async {
+        final t = await showTimePicker(
+          context: context,
+          initialTime: time ?? const TimeOfDay(hour: 18, minute: 0),
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.light(
+                  primary: AppColors.primary,
+                ),
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (t != null) onSelected(t);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.textLight.withOpacity(0.15), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time, size: 18, color: AppColors.textSecondary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                time != null ? time.format(context) : label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: time != null ? AppColors.textPrimary : AppColors.textSecondary,
+                  fontWeight: time != null ? FontWeight.w600 : FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -42,6 +42,10 @@ class MenuRepository {
         'preparation_time': item.preparationTime,
         'is_vegetarian': item.isVegetarian,
         'is_spicy': item.isSpicy,
+        'is_happy_hour': item.isHappyHour,
+        'happy_hour_price': item.happyHourPrice,
+        'happy_hour_start': item.happyHourStart,
+        'happy_hour_end': item.happyHourEnd,
       }).select().single();
       return response['id'] as String?;
     } catch (e) {
@@ -62,6 +66,10 @@ class MenuRepository {
         'preparation_time': item.preparationTime,
         'is_vegetarian': item.isVegetarian,
         'is_spicy': item.isSpicy,
+        'is_happy_hour': item.isHappyHour,
+        'happy_hour_price': item.happyHourPrice,
+        'happy_hour_start': item.happyHourStart,
+        'happy_hour_end': item.happyHourEnd,
       }).eq('id', item.id);
       return true;
     } catch (e) {
@@ -70,15 +78,16 @@ class MenuRepository {
     }
   }
 
-  Future<bool> toggleFoodItemAvailability(String itemId, bool isAvailable) async {
+  Future<bool> updateItemAvailability(String itemId, bool isAvailable, {required bool isGrocery}) async {
     try {
+      final table = isGrocery ? 'grocery_items' : 'food_items';
       await _supabase
-          .from('food_items')
+          .from(table)
           .update({'is_available': isAvailable})
           .eq('id', itemId);
       return true;
     } catch (e) {
-      debugPrint('Error toggling food item: $e');
+      debugPrint('Error toggling item availability: $e');
       return false;
     }
   }
@@ -146,19 +155,6 @@ class MenuRepository {
       return true;
     } catch (e) {
       debugPrint('Error updating grocery item: $e');
-      return false;
-    }
-  }
-
-  Future<bool> toggleGroceryItemAvailability(String itemId, bool isAvailable) async {
-    try {
-      await _supabase
-          .from('grocery_items')
-          .update({'is_available': isAvailable})
-          .eq('id', itemId);
-      return true;
-    } catch (e) {
-      debugPrint('Error toggling grocery item: $e');
       return false;
     }
   }
@@ -501,6 +497,10 @@ class MenuRepository {
       'discountPrice': db['discount_price'],
       'discountEndTime': db['discount_end_time'],
       'discountQuantity': db['discount_quantity'],
+      'isHappyHour': db['is_happy_hour'] ?? false,
+      'happyHourPrice': db['happy_hour_price'],
+      'happyHourStart': db['happy_hour_start'],
+      'happyHourEnd': db['happy_hour_end'],
     };
   }
 
