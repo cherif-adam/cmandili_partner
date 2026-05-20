@@ -93,7 +93,6 @@ class PushService {
           importance: Importance.max,
           playSound: true,
           sound: const RawResourceAndroidNotificationSound('new_order'),
-          additionalFlags: Int32List.fromList([4]),
         ));
 
     // Show heads-up alerts even while the app is in the foreground (iOS).

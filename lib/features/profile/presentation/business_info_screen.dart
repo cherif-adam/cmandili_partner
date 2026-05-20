@@ -82,7 +82,7 @@ class _BusinessInfoScreenState extends ConsumerState<BusinessInfoScreen> {
     if (_pickedLogo == null) return null;
     final supabase = Supabase.instance.client;
     final ext = _pickedLogo!.path.split('.').last.toLowerCase();
-    final path = 'restaurant-logos/$entityId-${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final path = '$entityId-${DateTime.now().millisecondsSinceEpoch}.$ext';
     await supabase.storage.from('items').upload(
           path,
           _pickedLogo!,
