@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -611,8 +612,24 @@ class _DashboardTab extends ConsumerWidget {
   }
 
   Widget _buildOrderCard(BuildContext context, WidgetRef ref, dynamic order) {
+    final typedOrder = order as Order;
     final statusColor = _statusColor(order.status);
     final isPending = order.status == OrderStatus.pending;
+
+    // ── First-item thumbnail ──────────────────────────────────────────────
+    final firstItem = typedOrder.items.isNotEmpty ? typedOrder.items.first : null;
+    final imageUrl = firstItem?.imageUrl ?? '';
+
+    // ── Order title: first item name + overflow count ─────────────────────
+    final String orderTitle;
+    if (firstItem == null) {
+      orderTitle = '#${order.id.substring(0, 8).toUpperCase()}';
+    } else {
+      final extra = typedOrder.items.length - 1;
+      orderTitle = extra > 0
+          ? '${firstItem.displayName} + $extra item(s)'
+          : firstItem.displayName;
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -632,16 +649,32 @@ class _DashboardTab extends ConsumerWidget {
         children: [
           Row(
             children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.12),
+          // ── Item thumbnail (52×52) with shopping-bag fallback ──────────
+          SizedBox(
+            width: 52,
+            height: 52,
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.shopping_bag_rounded,
-              color: statusColor,
+              child: imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        color: statusColor.withOpacity(0.08),
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => _itemFallback(statusColor),
+                    )
+                  : _itemFallback(statusColor),
             ),
           ),
           const SizedBox(width: 14),
@@ -650,12 +683,14 @@ class _DashboardTab extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '#${order.id.substring(0, 8).toUpperCase()}',
+                  orderTitle,
                   style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${order.items.length} item(s)',
+                  '${typedOrder.items.length} item(s)',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 6),
@@ -738,6 +773,14 @@ class _DashboardTab extends ConsumerWidget {
     ],
   ),
 );
+  }
+
+  /// Fallback widget shown when an item has no image or the URL fails to load.
+  Widget _itemFallback(Color statusColor) {
+    return Container(
+      color: statusColor.withOpacity(0.12),
+      child: Icon(Icons.shopping_bag_rounded, color: statusColor),
+    );
   }
 
   void _showRejectDialog(BuildContext context, WidgetRef ref, dynamic order) {

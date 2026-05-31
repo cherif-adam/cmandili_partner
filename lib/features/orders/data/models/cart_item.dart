@@ -56,7 +56,8 @@ class CartItem {
             name: grocery['name'] ?? '',
             price: (grocery['price'] ?? 0).toDouble(),
             quantity: json['quantity'] ?? 1,
-            imageUrl: grocery['image_url'] ?? '',
+            // _parseOrderItems stores the key as camelCase 'imageUrl'.
+            imageUrl: grocery['imageUrl'] as String? ?? '',
             voiceNoteContent: voiceContent,
             voiceNoteDurationSeconds: voiceDuration,
             variantName: variantName,
@@ -68,7 +69,8 @@ class CartItem {
             name: food['name'] ?? '',
             price: (food['price'] ?? 0).toDouble(),
             quantity: json['quantity'] ?? 1,
-            imageUrl: food['image_url'] ?? '',
+            // _parseOrderItems stores the key as camelCase 'imageUrl'.
+            imageUrl: food['imageUrl'] as String? ?? '',
             specialInstructions: json['specialInstructions'],
             voiceNoteContent: voiceContent,
             voiceNoteDurationSeconds: voiceDuration,
