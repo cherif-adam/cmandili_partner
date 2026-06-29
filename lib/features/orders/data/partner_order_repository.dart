@@ -94,6 +94,21 @@ class PartnerOrderRepository {
     return controller.stream;
   }
 
+  /// Fetch a single order once by id (with items joined).
+  ///
+  /// Used by the notification deep-link: when the partner taps an alarm we only
+  /// have the order id, so we resolve the full [Order] before pushing the
+  /// detail screen. Returns null if the order no longer exists / isn't visible.
+  Future<Order?> fetchOrder(String orderId) async {
+    final row = await _supabase
+        .from('orders_with_customer')
+        .select('*, order_items(*, food_items(*), grocery_items(*))')
+        .eq('id', orderId)
+        .maybeSingle();
+    if (row == null) return null;
+    return Order.fromJson(_mapOrderFromDb(row));
+  }
+
   /// Stream a single order in real-time for the tracking screen.
   ///
   /// Supabase's `.stream()` can't join, so we listen for Postgres changes on
