@@ -287,13 +287,14 @@ class PartnerOrderRepository {
 
   /// Mark an order as partner-self-delivered.
   ///
-  /// Sets self_delivery = true and advances status to 'on_the_way' so the
-  /// partner can use the existing "mark as delivered" flow to complete it.
+  /// Sets self_delivery = true and advances status to 'onTheWay' (camelCase —
+  /// the only spelling orders_status_check accepts) so the partner can use
+  /// the existing "mark as delivered" flow to complete it.
   /// driver_fee_cut will be 0 when the settlement trigger fires on delivery.
   Future<void> confirmSelfDelivery(String orderId) async {
     await _supabase.from('orders').update({
       'self_delivery': true,
-      'status': 'on_the_way',
+      'status': 'onTheWay',
     }).eq('id', orderId);
   }
 
