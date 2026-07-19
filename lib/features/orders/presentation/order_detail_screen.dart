@@ -320,6 +320,8 @@ class _ItemRow extends StatelessWidget {
     final hasText = (item.specialInstructions as String?)?.isNotEmpty ?? false;
     final hasVoice = (item.voiceNoteContent as String?)?.isNotEmpty ?? false;
     final duration = item.voiceNoteDurationSeconds as int?;
+    final optionsSummary = item.optionsSummary as String?;
+    final hasOptions = optionsSummary?.isNotEmpty ?? false;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -340,6 +342,13 @@ class _ItemRow extends StatelessWidget {
               ),
             ],
           ),
+          if (hasOptions) ...[
+            const SizedBox(height: 2),
+            Text(
+              optionsSummary!,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+          ],
           if (hasText) ...[
             const SizedBox(height: 4),
             Row(
