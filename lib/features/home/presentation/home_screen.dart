@@ -295,13 +295,19 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
 
   /// IDs of pending orders for which a dialog has already been shown this
   /// session. Prevents the same order from triggering multiple dialogs if
   /// the stream emits it again (e.g. on reconnect).
   final Set<String> _shownPendingIds = {};
+
+  /// New orders waiting to be shown, one dialog at a time (a burst of orders
+  /// must not spawn overlapping dialogs — see [_maybeShowNextDialog]).
+  final List<Order> _dialogQueue = [];
+  bool _dialogShowing = false;
 
   final List<Widget> _tabs = const [
     _DashboardTab(),
@@ -311,16 +317,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ProfileScreen(),
   ];
 
-  /// Shows the incoming-order dialog for [order] after the current frame so
-  /// it never interrupts an ongoing build pass.
-  void _showIncomingOrderDialog(Order order) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showDialog(
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Realtime's websocket is commonly suspended by the OS while backgrounded
+  /// (screen lock included) and does not replay events missed in that gap —
+  /// it's live-only, not a durable queue. On resume we can't tell whether the
+  /// socket silently died or just went idle, so unconditionally invalidating
+  /// forces a clean channel + a full re-fetch either way, catching anything
+  /// missed while the app was away.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(partnerOrdersStreamProvider);
+      ref.invalidate(dashboardStatsProvider);
+    }
+  }
+
+  /// Queues the incoming-order dialog for [order]. Dialogs are shown one at a
+  /// time in arrival order — a burst of several orders queues instead of
+  /// stacking overlapping routes, and none are dropped.
+  void _enqueueIncomingOrder(Order order) {
+    _dialogQueue.add(order);
+    _maybeShowNextDialog();
+  }
+
+  void _maybeShowNextDialog() {
+    if (_dialogShowing || _dialogQueue.isEmpty) return;
+    _dialogShowing = true;
+    final order = _dialogQueue.removeAt(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _dialogShowing = false;
+        return;
+      }
+      await showDialog(
         context: context,
         barrierDismissible: false, // partner must explicitly accept or reject
         builder: (_) => IncomingOrderDialog(order: order),
       );
+      _dialogShowing = false;
+      if (mounted) _maybeShowNextDialog();
     });
   }
 
@@ -332,9 +378,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Démarre l'écoute globale pour les alertes sonores de nouvelles commandes
     ref.listen(orderAlertProvider, (_, __) {});
 
-    // Detect new pending orders and show the incoming-order dialog once per
-    // order ID. addPostFrameCallback ensures the dialog is shown safely after
-    // the current build completes, even if the stream emits during a rebuild.
+    // Detect new pending orders and queue the incoming-order dialog once per
+    // order ID (queueing — not showing directly — is what keeps a burst of
+    // several orders from spawning overlapping dialogs; see
+    // _maybeShowNextDialog). Fires on every stream emission: the initial
+    // fetch (login), a live Realtime change, and the resume-triggered
+    // invalidation in didChangeAppLifecycleState all funnel through here
+    // identically, so nothing extra is needed to handle them differently.
     ref.listen<AsyncValue<List<Order>>>(partnerOrdersStreamProvider,
         (_, next) {
       next.whenData((orders) {
@@ -342,7 +392,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (order.status == OrderStatus.pending &&
               !_shownPendingIds.contains(order.id)) {
             _shownPendingIds.add(order.id);
-            _showIncomingOrderDialog(order);
+            _enqueueIncomingOrder(order);
           }
         }
       });
