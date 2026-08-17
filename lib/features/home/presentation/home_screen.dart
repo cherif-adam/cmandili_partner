@@ -851,6 +851,7 @@ class _DashboardTab extends ConsumerWidget {
                         onTap: () {
                           final state = context.findAncestorStateOfType<_HomeScreenState>();
                           if (state != null) {
+                            // ignore: invalid_use_of_protected_member
                             state.setState(() => state._selectedIndex = action['tab'] as int);
                           }
                         },
