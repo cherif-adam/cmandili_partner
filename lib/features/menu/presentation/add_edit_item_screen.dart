@@ -170,7 +170,7 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
       final basePrice = double.tryParse(_priceController.text) ?? 0.0;
       final hpPrice = double.tryParse(hpText);
 
-      if (hpText.isEmpty || hpPrice == null) {
+      if (hpText.isEmpty || hpPrice == null || hpPrice <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Veuillez entrer un prix valide pour l\'Happy Hour', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error)
         );
@@ -362,7 +362,9 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
                 required: true,
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Enter a price';
-                  if (double.tryParse(v) == null) return 'Enter a valid number';
+                  final parsed = double.tryParse(v);
+                  if (parsed == null) return 'Enter a valid number';
+                  if (parsed <= 0) return 'Price must be greater than 0';
                   return null;
                 }),
             const SizedBox(height: 14),
