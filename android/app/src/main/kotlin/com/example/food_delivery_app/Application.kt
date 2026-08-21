@@ -38,7 +38,7 @@ class Application : FlutterApplication() {
 
             nm.createNotificationChannel(
                 NotificationChannel(
-                    "cmandili_orders_urgent_2",
+                    "cmandili_orders_urgent_3",
                     "Urgent Order Updates",
                     NotificationManager.IMPORTANCE_HIGH,
                 ).apply {
