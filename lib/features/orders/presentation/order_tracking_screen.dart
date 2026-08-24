@@ -10,6 +10,7 @@ import '../../../core/widgets/app_map.dart';
 import '../data/models/order.dart';
 import '../providers/order_provider.dart';
 import '../providers/partner_orders_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final Order order;
@@ -38,11 +39,42 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   double? _liveDriverLng;
   String? _subscribedOrderId;
 
+  // This partner's own restaurant/supermarket position — resolved once (it
+  // never changes between orders, it's always the same logged-in partner)
+  // so the map can show the pickup point the driver is coming from. Without
+  // this the map only ever showed the delivery address + driver, never
+  // where the order actually starts.
+  double? _restaurantLat;
+  double? _restaurantLng;
+  bool _restaurantFetchStarted = false;
+
   /// A delivery row is created with placeholder (0,0) coordinates the moment
   /// a driver accepts, before the first GPS tick lands. Treat that (and any
   /// null) as "no live location yet" so we never drop a marker in the ocean.
   static bool _isValidCoord(double? lat, double? lng) =>
       lat != null && lng != null && !(lat == 0 && lng == 0);
+
+  Future<void> _fetchRestaurantLocation() async {
+    if (_restaurantFetchStarted) return;
+    _restaurantFetchStarted = true;
+    try {
+      final profile = await ref.read(partnerProfileProvider.future);
+      if (profile == null || profile.entityId.isEmpty) return;
+      final table = profile.partnerType == 'restaurant' ? 'restaurants' : 'supermarkets';
+      final row = await _supabase
+          .from(table)
+          .select('latitude, longitude')
+          .eq('id', profile.entityId)
+          .maybeSingle();
+      if (row == null || !mounted) return;
+      setState(() {
+        _restaurantLat = (row['latitude'] as num?)?.toDouble();
+        _restaurantLng = (row['longitude'] as num?)?.toDouble();
+      });
+    } catch (_) {
+      // Best-effort — the map still works without the pickup marker.
+    }
+  }
 
   void _ensureSubscribed(String orderId) {
     if (_subscribedOrderId == orderId) return;
@@ -97,10 +129,24 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     if (currentOrder.driverId != null) {
       _ensureSubscribed(currentOrder.id);
     }
+    if (!isCourier) {
+      // Fire-and-forget; the setState inside repaints once resolved.
+      _fetchRestaurantLocation();
+    }
     // Prefer the live GPS-tick subscription; fall back to the snapshot from
     // orders_with_customer (which only refreshes on order-status changes).
     final driverLat = _liveDriverLat ?? currentOrder.driverLatitude;
     final driverLng = _liveDriverLng ?? currentOrder.driverLongitude;
+
+    // Courier orders carry their own pickupAddress on the order row (the
+    // sender's place). Standard food/supermarket orders start from this
+    // partner's own restaurant/supermarket instead, resolved separately
+    // above since the order row has no coordinates for it.
+    final double? pickupLat =
+        isCourier ? currentOrder.pickupAddress?.latitude : _restaurantLat;
+    final double? pickupLng =
+        isCourier ? currentOrder.pickupAddress?.longitude : _restaurantLng;
+    final hasPickup = pickupLat != null && pickupLng != null;
 
     return Scaffold(
       body: Stack(
@@ -121,13 +167,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                   kind: AppMapMarkerKind.delivery,
                   title: 'Delivery Location',
                 ),
-                if (isCourier && currentOrder.pickupAddress != null)
+                if (hasPickup)
                   AppMapMarker(
                     id: 'pickup',
-                    latitude: currentOrder.pickupAddress!.latitude,
-                    longitude: currentOrder.pickupAddress!.longitude,
+                    latitude: pickupLat,
+                    longitude: pickupLng,
                     kind: AppMapMarkerKind.pickup,
-                    title: 'Pickup Location',
+                    title: isCourier ? 'Pickup Location' : 'Restaurant',
                   ),
                 AppMapMarker(
                   id: 'driver',
