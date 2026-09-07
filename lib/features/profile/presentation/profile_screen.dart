@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/presentation/auth_screen.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/providers/localization_provider.dart';
 import '../../../core/providers/theme_provider.dart';
@@ -186,16 +185,14 @@ class ProfileScreen extends ConsumerWidget {
                   textColor: AppColors.error,
                   iconColor: AppColors.error,
                   showArrow: false,
-                  onTap: () async {
-                    final authRepo = ref.read(authRepositoryProvider);
-                    await authRepo.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const AuthScreen()),
-                        (route) => false,
-                      );
-                    }
-                  },
+                  // Just sign out — _RootGate (main.dart) reacts to
+                  // authStateProvider on its own and swaps to AuthScreen. The
+                  // explicit pushAndRemoveUntil that used to follow signOut()
+                  // wiped the whole Navigator stack, which tore down
+                  // _RootGate itself — so a later sign-in attempt had no
+                  // widget left watching authStateProvider (the session
+                  // updated but nothing was there to react to it).
+                  onTap: () => ref.read(authRepositoryProvider).signOut(),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                 ),

@@ -63,7 +63,6 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
     final locale = ref.watch(localizationProvider);
     final themeMode = ref.watch(themeProvider);
 
@@ -86,13 +85,29 @@ class MyApp extends ConsumerWidget {
         Locale('ar'),
         Locale('fr'),
       ],
-      home: authState.when(
-        data: (user) => user != null ? const HomeScreen() : const AuthScreen(),
-        loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-        error: (_, __) => const AuthScreen(),
+      // home is a fixed widget reference — it must never change across
+      // rebuilds. The Navigator only consults `home` once, to build its
+      // initial route; changing it later does not replace what that route
+      // already shows. All the auth-dependent branching happens INSIDE
+      // _RootGate instead, which is a normal reactive rebuild (no Navigator
+      // involved), so it correctly reflects sign-in/sign-out while running.
+      home: const _RootGate(),
+    );
+  }
+}
+
+class _RootGate extends ConsumerWidget {
+  const _RootGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    return authState.when(
+      data: (user) => user != null ? const HomeScreen() : const AuthScreen(),
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       ),
+      error: (_, __) => const AuthScreen(),
     );
   }
 }
