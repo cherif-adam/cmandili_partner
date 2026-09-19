@@ -281,6 +281,16 @@ class MenuRepository {
           'partnerType': partnerType,
         },
       );
+    } on FunctionException catch (e) {
+      // The function WAS reached — it ran and returned an error status
+      // (Gemini failure, bad image, DB insert failure, etc). e.details is
+      // the decoded JSON body ({"error": "..."}), which carries the real
+      // reason. Surface it instead of a generic connectivity message, which
+      // is only accurate for the transport-level catch below.
+      debugPrint('scan-menu returned ${e.status}: ${e.details}');
+      final details = e.details;
+      final serverMessage = details is Map ? details['error']?.toString() : null;
+      throw Exception(serverMessage ?? 'The AI service failed to process the image (${e.status}).');
     } catch (e) {
       debugPrint('scan-menu invoke failed: $e');
       throw Exception('Could not reach the AI service. Check your connection.');

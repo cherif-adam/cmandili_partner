@@ -57,8 +57,10 @@ serve(async (req) => {
 
     console.log(`Detected mimeType: ${detectedMimeType}, base64 length: ${cleanBase64.length}`);
 
-    // Call Gemini API (1.5 Flash is ideal for fast vision tasks)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+    // gemini-1.5-flash on the v1 endpoint was retired by Google (404 "not
+    // found for API version v1") — ai-chat/ai-search hit the same thing and
+    // moved to v1beta + gemini-2.5-flash; this function hadn't been ported.
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
     
     const prompt = `Tu es un assistant spécialisé dans l'extraction de données pour un catalogue de livraison en Tunisie. Analyse l'image de ce menu. Extrais chaque article, son prix (en Dinar Tunisien, convertis les formats comme '12 DT' en nombre décimal), et déduis sa catégorie logique. Tu dois renvoyer UNIQUEMENT un objet JSON valide avec cette structure exacte : { "items": [ { "name": "Nom", "price": 12.5, "category": "Catégorie", "description": "Ingrédients ou courte description si présente" } ] }. You are a professional menu extractor. Return ONLY a raw JSON object. Do not include markdown formatting, code blocks (like \`\`\`json), or any introductory/explanatory text. Your response must start with { and end with }.`;
 
@@ -79,10 +81,11 @@ serve(async (req) => {
       generationConfig: {
         temperature: 0.1,
         maxOutputTokens: 8192,
-        // NOTE: responseMimeType is intentionally omitted here.
-        // Setting it to "application/json" while also sending an image
-        // causes a 400 INVALID_ARGUMENT on some Gemini 1.5 Flash builds.
-        // We parse the JSON from the text response ourselves instead.
+        responseMimeType: "application/json",
+        // gemini-2.5-flash is a thinking model — without this it can spend
+        // the whole maxOutputTokens budget on internal reasoning and return
+        // no text at all (same fix as ai-search's callGemini).
+        thinkingConfig: { thinkingBudget: 0 },
       }
     };
 
