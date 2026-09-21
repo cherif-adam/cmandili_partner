@@ -1,5 +1,6 @@
 package com.cmandili.partner
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.media.AudioAttributes
@@ -14,10 +15,17 @@ class Application : FlutterApplication() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val nm = getSystemService(NotificationManager::class.java)
 
+            // Android caches a channel's sound at creation and ignores every
+            // later edit to the same id, so the already-installed, permanently
+            // silent "cmandili_orders" cannot be repaired in place -- it has to
+            // be re-created under a fresh id. Drop the stale one so it doesn't
+            // linger in system settings as a dead silent duplicate.
+            nm.deleteNotificationChannel("cmandili_orders")
+
             // Standard order status updates
             nm.createNotificationChannel(
                 NotificationChannel(
-                    "cmandili_orders",
+                    "cmandili_orders_v2",
                     "Order Updates",
                     NotificationManager.IMPORTANCE_HIGH,
                 ).apply {
@@ -49,17 +57,29 @@ class Application : FlutterApplication() {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
 
+            // _3 -> _4: importance and DND-bypass are also frozen at creation
+            // time, so raising the channel to IMPORTANCE_MAX and letting it
+            // through Do Not Disturb needs a new id. IMPORTANCE_HIGH shows a
+            // heads-up but IMPORTANCE_MAX is what reliably drives the
+            // full-screen intent on a locked screen.
+            nm.deleteNotificationChannel("cmandili_orders_urgent_3")
+
             nm.createNotificationChannel(
                 NotificationChannel(
-                    "cmandili_orders_urgent_3",
+                    "cmandili_orders_urgent_4",
                     "Urgent Order Updates",
-                    NotificationManager.IMPORTANCE_HIGH,
+                    NotificationManager.IMPORTANCE_MAX,
                 ).apply {
                     description = "Alarm-level alert for new incoming orders"
                     setSound(soundUri, alarmAttrs)
                     enableVibration(true)
                     vibrationPattern = longArrayOf(0, 500, 300, 700, 300, 700)
                     setShowBadge(true)
+                    // A restaurant loses the order if the alert is muted by a
+                    // Do Not Disturb schedule they forgot was on.
+                    setBypassDnd(true)
+                    enableLights(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 }
             )
         }

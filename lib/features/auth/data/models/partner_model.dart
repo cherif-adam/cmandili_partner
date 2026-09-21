@@ -1,7 +1,43 @@
+/// Maps a partner's `partner_type` onto the `vendors.category` it sells under.
+///
+/// The two legacy values ('restaurant', 'supermarket') predate the generic
+/// vendors table and do not match their category ids, so they are translated
+/// here. Every newer type ('flowers', 'pets', 'gifts', 'bakery',
+/// 'electronics') already *is* its category id and passes straight through —
+/// which is what lets a new shop type be launched without touching this file
+/// again.
+String vendorCategoryForPartnerType(String partnerType) {
+  switch (partnerType) {
+    case 'restaurant':
+      return 'food';
+    case 'supermarket':
+      return 'grocery';
+    default:
+      return partnerType;
+  }
+}
+
+/// Partner types this build can register, paired with how they are shown in
+/// the sign-up picker.
+const List<({String type, String label, String icon})> kPartnerTypes = [
+  (type: 'restaurant', label: 'Restaurant', icon: '🍕'),
+  (type: 'supermarket', label: 'Supermarché', icon: '🛒'),
+  (type: 'bakery', label: 'Pâtisserie', icon: '🥐'),
+  (type: 'flowers', label: 'Fleuriste', icon: '💐'),
+  (type: 'pets', label: 'Animalerie', icon: '🐾'),
+  (type: 'gifts', label: 'Cadeaux', icon: '🎁'),
+  (type: 'electronics', label: 'Électronique', icon: '📱'),
+];
+
 class PartnerProfile {
   final String userId;
-  final String partnerType; // 'restaurant' | 'supermarket'
-  final String entityId;    // restaurants.id or supermarkets.id
+  /// 'restaurant' | 'supermarket' | 'bakery' | 'flowers' | 'pets' | 'gifts'
+  /// | 'electronics'. See [vendorCategoryForPartnerType] for how this maps
+  /// onto `vendors.category`.
+  final String partnerType;
+
+  /// `vendors.id` of the shop this partner owns.
+  final String entityId;
   final String businessName;
   final String address;
   final String? phone;

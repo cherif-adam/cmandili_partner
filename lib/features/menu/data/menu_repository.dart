@@ -363,4 +363,86 @@ class MenuRepository {
       'discountQuantity': db['discount_quantity'],
     };
   }
+
+  // ─── Generic vendor items (flowers, pets, gifts, bakery, electronics) ──────
+  //
+  // The food and grocery methods above write through the legacy views, which
+  // are filtered on their own category — a florist writing through them would
+  // insert a row that its own catalogue query then filters out. These go
+  // straight at `vendor_items`, so any category works.
+  //
+  // Restaurant-only fields (happy hour, vegetarian, prep time) are absent by
+  // design: they are meaningless for a bouquet, and putting them on every
+  // category's item form would be worse than leaving food on its own path.
+
+  Future<List<Map<String, dynamic>>> getVendorItems(String vendorId) async {
+    try {
+      final response = await _supabase
+          .from('vendor_items')
+          .select()
+          .eq('vendor_id', vendorId)
+          .order('sort_order');
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      debugPrint('Error fetching vendor items: $e');
+      return [];
+    }
+  }
+
+  Future<String?> addVendorItem({
+    required String vendorId,
+    required String name,
+    required double price,
+    String description = '',
+    String imageUrl = '',
+    String? category,
+    String? unit,
+    bool isAvailable = true,
+  }) async {
+    try {
+      final response = await _supabase.from('vendor_items').insert({
+        'vendor_id': vendorId,
+        'name': name,
+        'description': description,
+        'image_url': imageUrl,
+        'price': price,
+        'category': category,
+        'unit': unit,
+        'is_available': isAvailable,
+      }).select().single();
+      return response['id'] as String?;
+    } catch (e) {
+      debugPrint('Error adding vendor item: $e');
+      return null;
+    }
+  }
+
+  Future<bool> updateVendorItem(
+    String itemId,
+    Map<String, dynamic> changes,
+  ) async {
+    try {
+      await _supabase.from('vendor_items').update(changes).eq('id', itemId);
+      return true;
+    } catch (e) {
+      debugPrint('Error updating vendor item: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteVendorItem(String itemId) async {
+    try {
+      await _supabase.from('vendor_items').delete().eq('id', itemId);
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting vendor item: $e');
+      return false;
+    }
+  }
+
+  /// Availability toggle that works for any category. The older
+  /// [updateItemAvailability] resolves a legacy view from an isGrocery flag,
+  /// which cannot express "florist".
+  Future<bool> setVendorItemAvailability(String itemId, bool isAvailable) =>
+      updateVendorItem(itemId, {'is_available': isAvailable});
 }
