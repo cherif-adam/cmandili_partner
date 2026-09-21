@@ -22,7 +22,8 @@ class PartnerOrderRepository {
         partnerType == 'supermarket' ? 'supermarket_id' : 'restaurant_id';
     final rows = await _supabase
         .from('orders_with_customer')
-        .select('*, order_items(*, food_items(*), grocery_items(*), vendor_items(*))')
+        .select('*, order_items(*, food_items:food_items_legacy(*), '
+            'grocery_items:grocery_items_legacy(*), vendor_items(*))')
         .eq(filterColumn, entityId)
         .order('created_at', ascending: false);
     return (rows as List)
@@ -112,7 +113,8 @@ class PartnerOrderRepository {
   Future<Order?> fetchOrder(String orderId) async {
     final row = await _supabase
         .from('orders_with_customer')
-        .select('*, order_items(*, food_items(*), grocery_items(*), vendor_items(*))')
+        .select('*, order_items(*, food_items:food_items_legacy(*), '
+            'grocery_items:grocery_items_legacy(*), vendor_items(*))')
         .eq('id', orderId)
         .maybeSingle();
     if (row == null) return null;
@@ -134,7 +136,8 @@ class PartnerOrderRepository {
       try {
         final row = await _supabase
             .from('orders_with_customer')
-            .select('*, order_items(*, food_items(*), grocery_items(*), vendor_items(*))')
+            .select('*, order_items(*, food_items:food_items_legacy(*), '
+                'grocery_items:grocery_items_legacy(*), vendor_items(*))')
             .eq('id', orderId)
             .maybeSingle();
         if (row != null && !controller.isClosed) {
