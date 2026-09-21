@@ -85,15 +85,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (newAvatarUrl != null &&
           profile != null &&
           profile.entityId.isNotEmpty) {
-        final table =
-            profile.partnerType == 'restaurant' ? 'restaurants' : 'supermarkets';
+        // Always `vendors`: entityId IS vendors.id, and restaurants /
+        // supermarkets are only views over it. Picking a view by partner type
+        // sent every non-restaurant logo to `supermarkets`, so a florist's or
+        // bakery's picture silently went nowhere.
         try {
           await Supabase.instance.client
-              .from(table)
+              .from('vendors')
               .update({'image_url': newAvatarUrl})
               .eq('id', profile.entityId);
         } catch (e) {
-          debugPrint('Could not sync logo to $table.image_url: $e');
+          debugPrint('Could not sync logo to vendors.image_url: $e');
         }
       }
 

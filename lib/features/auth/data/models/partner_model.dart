@@ -29,6 +29,25 @@ const List<({String type, String label, String icon})> kPartnerTypes = [
   (type: 'electronics', label: 'Électronique', icon: '📱'),
 ];
 
+/// True for the categories whose catalogue lives in `vendor_items`.
+///
+/// Restaurants and supermarkets keep their legacy tables; everything else
+/// (bakery, flowers, pets, gifts, electronics) is generic. Written as "not one
+/// of the two legacy types" on purpose, so launching a new category needs no
+/// edit here.
+bool isGenericVendorType(String partnerType) =>
+    partnerType != 'restaurant' && partnerType != 'supermarket';
+
+/// Human label for a partner type, e.g. 'flowers' -> 'Fleuriste'. Falls back to
+/// the raw type so a type added to the DB before this list still shows
+/// something sane instead of being mislabelled as another category.
+String partnerTypeLabel(String partnerType) {
+  for (final t in kPartnerTypes) {
+    if (t.type == partnerType) return t.label;
+  }
+  return partnerType;
+}
+
 class PartnerProfile {
   final String userId;
   /// 'restaurant' | 'supermarket' | 'bakery' | 'flowers' | 'pets' | 'gifts'

@@ -80,7 +80,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     try {
       final profile = await ref.read(partnerProfileProvider.future);
       if (profile == null || profile.entityId.isEmpty) return;
-      final table = profile.partnerType == 'restaurant' ? 'restaurants' : 'supermarkets';
+      // Always `vendors`: entityId IS vendors.id and the other two are only
+      // views over it, so picking a view by partner type looked a florist's
+      // shop up in `supermarkets` and found nothing.
+      const table = 'vendors';
       final row = await _supabase
           .from(table)
           .select('latitude, longitude')

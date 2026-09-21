@@ -13,11 +13,16 @@ class PartnerOrderRepository {
   /// profiles → recipient_* fallback chain) without a second round-trip.
   Future<List<Order>> getPartnerOrders(
       String entityId, String partnerType) async {
+    // Only supermarkets sit in supermarket_id. Restaurants AND every generic
+    // vendor (bakery, flowers, pets, gifts, electronics) ride restaurant_id --
+    // the client writes the vendor id there for all of them. Testing for
+    // 'restaurant' instead meant a florist queried supermarket_id and never
+    // saw a single order.
     final filterColumn =
-        partnerType == 'restaurant' ? 'restaurant_id' : 'supermarket_id';
+        partnerType == 'supermarket' ? 'supermarket_id' : 'restaurant_id';
     final rows = await _supabase
         .from('orders_with_customer')
-        .select('*, order_items(*, food_items(*), grocery_items(*))')
+        .select('*, order_items(*, food_items(*), grocery_items(*), vendor_items(*))')
         .eq(filterColumn, entityId)
         .order('created_at', ascending: false);
     return (rows as List)
@@ -68,8 +73,13 @@ class PartnerOrderRepository {
     // Initial load is immediate (no debounce — user is waiting on first paint).
     unawaited(refresh());
 
+    // Only supermarkets sit in supermarket_id. Restaurants AND every generic
+    // vendor (bakery, flowers, pets, gifts, electronics) ride restaurant_id --
+    // the client writes the vendor id there for all of them. Testing for
+    // 'restaurant' instead meant a florist queried supermarket_id and never
+    // saw a single order.
     final filterColumn =
-        partnerType == 'restaurant' ? 'restaurant_id' : 'supermarket_id';
+        partnerType == 'supermarket' ? 'supermarket_id' : 'restaurant_id';
     final channel = _supabase
         .channel('partner_orders_$entityId')
         .onPostgresChanges(
@@ -102,7 +112,7 @@ class PartnerOrderRepository {
   Future<Order?> fetchOrder(String orderId) async {
     final row = await _supabase
         .from('orders_with_customer')
-        .select('*, order_items(*, food_items(*), grocery_items(*))')
+        .select('*, order_items(*, food_items(*), grocery_items(*), vendor_items(*))')
         .eq('id', orderId)
         .maybeSingle();
     if (row == null) return null;
@@ -124,7 +134,7 @@ class PartnerOrderRepository {
       try {
         final row = await _supabase
             .from('orders_with_customer')
-            .select('*, order_items(*, food_items(*), grocery_items(*))')
+            .select('*, order_items(*, food_items(*), grocery_items(*), vendor_items(*))')
             .eq('id', orderId)
             .maybeSingle();
         if (row != null && !controller.isClosed) {
@@ -184,8 +194,9 @@ class PartnerOrderRepository {
   Future<Map<String, dynamic>> getDashboardStats(
       String entityId, String partnerType) async {
     try {
+      // See getPartnerOrders: generic vendors ride restaurant_id too.
       final filterColumn =
-          partnerType == 'restaurant' ? 'restaurant_id' : 'supermarket_id';
+          partnerType == 'supermarket' ? 'supermarket_id' : 'restaurant_id';
       final todayMidnight = DateTime(
         DateTime.now().year,
         DateTime.now().month,
@@ -378,6 +389,31 @@ class PartnerOrderRepository {
             'unit': groceryData['unit'] ?? 'piece',
             'isOrganic': groceryData['is_organic'] ?? false,
             'isAvailable': groceryData['is_available'] ?? true,
+          },
+        });
+        continue;
+      }
+
+      // Generic vendor item (bakery, flowers, pets, gifts, electronics).
+      // Without this branch a florist's order lines fell through to the
+      // fallback below and showed as a bare "Item".
+      final vendorData = row['vendor_items'] as Map<String, dynamic>?;
+      if (vendorData != null) {
+        result.add({
+          'type': 'vendor',
+          'quantity': quantity,
+          'specialInstructions': specialInstructions,
+          'options': mergedOptions,
+          'vendorItem': {
+            'id': vendorData['id'] ?? '',
+            'vendorId': vendorData['vendor_id'] ?? '',
+            'name': vendorData['name'] ?? '',
+            'description': vendorData['description'] ?? '',
+            'imageUrl': vendorData['image_url'] ?? '',
+            'price': price, // order-time price, not the current one
+            'category': vendorData['category'] ?? '',
+            'unit': vendorData['unit'],
+            'isAvailable': vendorData['is_available'] ?? true,
           },
         });
         continue;
