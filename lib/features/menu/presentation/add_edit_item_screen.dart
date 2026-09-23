@@ -372,9 +372,13 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
+        // No 'Add '/'Edit ' prefix: the localized strings already carry the
+        // verb, so prefixing produced "Add Add Dish" / "Edit Ajouter un
+        // produit". A prefix also cannot work across locales -- Arabic and
+        // French put the verb in a different place than English.
         title: Text(_isEditing
-            ? 'Edit ${_isRestaurant ? l.addDish : l.addProduct}'
-            : 'Add ${_isRestaurant ? l.addDish : l.addProduct}'),
+            ? (_isRestaurant ? l.editDish : l.editProduct)
+            : (_isRestaurant ? l.addDish : l.addProduct)),
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,

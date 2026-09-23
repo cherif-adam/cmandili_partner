@@ -310,7 +310,13 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: Text(
-          'Add ${profileAsync.value?.partnerType == "restaurant" ? l.addDish : l.addProduct}',
+          // The localized string already contains the verb, so the old
+          // 'Add ' prefix rendered "Add Add Dish". Every non-restaurant
+          // type (bakery, flowers, pets, gifts, electronics) shares the
+          // generic "produit" wording rather than a per-category noun.
+          profileAsync.value?.partnerType == 'restaurant'
+              ? l.addDish
+              : l.addProduct,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
