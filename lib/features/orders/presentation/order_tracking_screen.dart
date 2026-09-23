@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/customer_contact.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/services/route_service.dart';
 import '../../../core/widgets/app_map.dart';
@@ -563,9 +564,35 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                       _DetailRow(
                           label: l.recipient,
                           value: currentOrder.recipientName ?? 'N/A'),
-                      _DetailRow(
-                          label: l.phone,
-                          value: currentOrder.recipientPhone ?? 'N/A'),
+                      // The recipient's number was printed as plain text with
+                      // no way to act on it — the partner had to retype it into
+                      // the dialler. Now it carries call and WhatsApp buttons.
+                      if ((currentOrder.recipientPhone ?? '').isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 110,
+                                child: Text(
+                                  l.phone,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: CustomerContact(
+                                  phone: currentOrder.recipientPhone!,
+                                  compact: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        _DetailRow(label: l.phone, value: 'N/A'),
                       _DetailRow(
                           label: l.item,
                           value:
