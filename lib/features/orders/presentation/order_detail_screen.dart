@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../data/models/order.dart';
 import '../providers/partner_orders_provider.dart';
 import 'widgets/voice_note_player.dart';
@@ -210,7 +211,13 @@ class OrderDetailScreen extends ConsumerWidget {
   }
 
   void _showStatusSheet(BuildContext context, WidgetRef ref) {
-    final nextStatuses = _nextStatuses(order.status);
+    final partnerType = ref.read(partnerProfileProvider).valueOrNull?.partnerType;
+    final nextStatuses = _nextStatuses(
+      order.status,
+      // Par defaut on garde l'etape de preparation : si le profil n'est pas
+      // encore charge, mieux vaut un bouton de trop qu'un statut saute.
+      skipsPreparation: partnerType != null && partnerType != 'restaurant',
+    );
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -257,10 +264,27 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  List<OrderStatus> _nextStatuses(OrderStatus current) {
+  /// Seuls les restaurants preparent. Pour toutes les autres categories --
+  /// supermarche, patisserie, fleurs, animalerie, cadeaux, electronique -- la
+  /// commande est rassemblee sur place et passe directement de Acceptee a
+  /// Prete : afficher un bouton "Preparer" leur ferait ajouter une etape qui
+  /// ne correspond a rien de leur cote.
+  ///
+  /// Derive de partner_type plutot que d'un drapeau par boutique : la regle
+  /// est bien par categorie, et aucun attribut de ce genre n'existe en base
+  /// (le `sansPreparation` du diagramme de classes n'a jamais ete implemente).
+  /// Sauter `preparing` ne change rien cote base : aucun trigger ni contrainte
+  /// n'impose l'ordre des statuts, le dispatch livreur se declenche sur
+  /// l'entree en 'ready' quel que soit le statut precedent, et `confirmed_at`
+  /// comme `ready_at` sont horodates sur leurs propres statuts.
+  List<OrderStatus> _nextStatuses(OrderStatus current, {required bool skipsPreparation}) {
     switch (current) {
       case OrderStatus.pending: return [OrderStatus.confirmed, OrderStatus.cancelled];
-      case OrderStatus.confirmed: return [OrderStatus.preparing, OrderStatus.cancelled];
+      case OrderStatus.confirmed:
+        return [
+          skipsPreparation ? OrderStatus.ready : OrderStatus.preparing,
+          OrderStatus.cancelled,
+        ];
       case OrderStatus.preparing: return [OrderStatus.ready];
       case OrderStatus.ready: return [OrderStatus.pickedUp, OrderStatus.onTheWay];
       case OrderStatus.pickedUp:
