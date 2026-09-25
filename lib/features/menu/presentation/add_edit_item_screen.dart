@@ -213,14 +213,29 @@ class _AddEditItemScreenState extends ConsumerState<AddEditItemScreen> {
     final profile = await ref.read(partnerProfileProvider.future);
     bool ok = false;
     
-    // Upload Image if selected
+    // Upload Image if selected.
+    //
+    // A failed upload used to fall through with the OLD url still in the
+    // controller, so the item saved "successfully" with its previous picture
+    // and the partner had no way to know the new one never left the phone.
     if (_imageFile != null) {
       final ext = _imageFile!.path.split('.').last;
       String path = '${const Uuid().v4()}.$ext';
       final url = await repo.uploadItemImage(path, _imageFile!);
-      if (url != null) {
-        _imageUrlController.text = url;
+      if (url == null) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Impossible d'envoyer l'image. Vérifiez votre connexion et réessayez.",
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
       }
+      _imageUrlController.text = url;
     }
 
     String formatTime(TimeOfDay? time) {
