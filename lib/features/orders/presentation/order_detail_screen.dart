@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/customer_contact.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../data/models/order.dart';
 import '../providers/partner_orders_provider.dart';
@@ -500,23 +500,16 @@ class _CustomerSection extends StatelessWidget {
               children: [
                 Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                 if (phone != null) ...[
-                  const SizedBox(height: 2),
-                  Text(phone, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 4),
+                  // Number plus call AND WhatsApp. A single call icon was not
+                  // enough: reaching a customer about a missing item or a
+                  // wrong address often fails on a voice call and succeeds on
+                  // WhatsApp, which works on data alone.
+                  CustomerContact(phone: phone, compact: true),
                 ],
               ],
             ),
           ),
-          if (phone != null)
-            IconButton(
-              tooltip: l.callCustomer,
-              icon: const Icon(Icons.phone, color: AppColors.success),
-              onPressed: () async {
-                final uri = Uri(scheme: 'tel', path: phone);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri);
-                }
-              },
-            ),
         ],
       ),
     );
