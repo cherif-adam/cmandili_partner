@@ -563,6 +563,46 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                     ),
                     const SizedBox(height: 12),
 
+                    // Customer contact for every order type, not just courier.
+                    // A shop chasing a late driver or checking an address on a
+                    // normal food order had no number here at all — the block
+                    // below was nested under `isCourier`. The number falls back
+                    // customerPhone -> delivery address, because
+                    // `recipient_phone` is only populated for courier jobs.
+                    if (!isCourier) ...[
+                      Builder(builder: (_) {
+                        final phone = [
+                          currentOrder.customerPhone,
+                          currentOrder.deliveryAddress.phone,
+                        ].firstWhere((p) => (p ?? '').isNotEmpty,
+                            orElse: () => null);
+                        if (phone == null) {
+                          return _DetailRow(label: l.phone, value: 'N/A');
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 110,
+                                child: Text(
+                                  l.phone,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: CustomerContact(
+                                    phone: phone, compact: true),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+
                     if (isCourier) ...[
                       _DetailRow(
                           label: l.recipient,

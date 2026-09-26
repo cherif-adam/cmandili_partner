@@ -117,8 +117,8 @@ class _BusinessInfoScreenState extends ConsumerState<BusinessInfoScreen> {
         'bio': _bioCtrl.text.trim(),
       }).eq('user_id', userId);
 
-      // If a new logo was picked, upload it and patch the restaurants/supermarkets
-      // row directly so the customer app's restaurant card can show it.
+      // If a new logo was picked, upload it and patch the vendors row directly
+      // so the customer app's vendor card can show it.
       if (_pickedLogo != null && profile != null && profile.entityId.isNotEmpty) {
         final logoUrl = await _uploadLogo(profile.entityId);
         if (logoUrl != null) {
@@ -126,6 +126,13 @@ class _BusinessInfoScreenState extends ConsumerState<BusinessInfoScreen> {
               .from('vendors')
               .update({'image_url': logoUrl})
               .eq('id', profile.entityId);
+          // Mirror onto partners.avatar_url too: the partner app's own profile
+          // header reads that column, so a logo set only here used to be
+          // invisible to the partner who just uploaded it.
+          await Supabase.instance.client
+              .from('partners')
+              .update({'avatar_url': logoUrl})
+              .eq('user_id', userId);
           if (mounted) {
             setState(() {
               _existingLogoUrl = logoUrl;
