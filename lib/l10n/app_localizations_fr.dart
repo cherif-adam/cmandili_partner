@@ -395,6 +395,91 @@ class AppLocalizationsFr extends AppLocalizations {
   String get clearHappyHour => 'Effacer Happy Hour';
 
   @override
+  String hhNormalPrice(String price) {
+    return 'Prix normal : $price DT';
+  }
+
+  @override
+  String get hhNewPrice => 'Prix Happy Hour (DT)';
+
+  @override
+  String get hhPriceRequired => 'Entrez le prix Happy Hour';
+
+  @override
+  String get hhPriceInvalid => 'Entrez un prix valide';
+
+  @override
+  String hhPriceTooHigh(String price) {
+    return 'Doit être inférieur au prix normal ($price DT)';
+  }
+
+  @override
+  String get hhQuickDiscount => 'Remise rapide';
+
+  @override
+  String get hhStart => 'Début';
+
+  @override
+  String get hhStartsNow => 'Maintenant, dès l\'activation';
+
+  @override
+  String get hhEnd => 'Fin';
+
+  @override
+  String get hhNoEnd => 'Sans date de fin';
+
+  @override
+  String get hhNoEndHint => 'Reste active jusqu\'à ce que vous l\'arrêtiez';
+
+  @override
+  String get hhEndOfDay => 'Ce soir 23:59';
+
+  @override
+  String get hhOtherDate => 'Autre date…';
+
+  @override
+  String hhEndsAt(String date) {
+    return 'Se termine $date';
+  }
+
+  @override
+  String get hhEndInPast => 'La fin doit être dans le futur';
+
+  @override
+  String get hhQuantity => 'Quantité à ce prix';
+
+  @override
+  String get hhUnlimited => 'Illimitée';
+
+  @override
+  String get hhLimited => 'Limitée';
+
+  @override
+  String get hhQuantityHint => 'ex. 7';
+
+  @override
+  String get hhQuantityInvalid => 'Entrez une quantité de 1 ou plus';
+
+  @override
+  String get hhQuantityHelp =>
+      'L\'offre s\'arrête automatiquement quand tout est vendu';
+
+  @override
+  String get hhLiveInfo =>
+      'Les clients voient l\'offre dès que vous l\'activez.';
+
+  @override
+  String get hhActiveNow => 'Active maintenant';
+
+  @override
+  String get hhUpdate => 'Mettre à jour Happy Hour';
+
+  @override
+  String hhUnitsLeft(int count) {
+    return 'Reste $count';
+  }
+
+  @override
   String get selectCategory =>
       'Veuillez sélectionner ou spécifier une catégorie.';
 

@@ -385,6 +385,89 @@ class AppLocalizationsAr extends AppLocalizations {
   String get clearHappyHour => 'مسح الساعة السعيدة';
 
   @override
+  String hhNormalPrice(String price) {
+    return 'السعر العادي: $price د.ت';
+  }
+
+  @override
+  String get hhNewPrice => 'سعر الساعة السعيدة (د.ت)';
+
+  @override
+  String get hhPriceRequired => 'أدخل سعر الساعة السعيدة';
+
+  @override
+  String get hhPriceInvalid => 'أدخل سعراً صحيحاً';
+
+  @override
+  String hhPriceTooHigh(String price) {
+    return 'يجب أن يكون أقل من السعر العادي ($price د.ت)';
+  }
+
+  @override
+  String get hhQuickDiscount => 'تخفيض سريع';
+
+  @override
+  String get hhStart => 'البداية';
+
+  @override
+  String get hhStartsNow => 'الآن، فور التفعيل';
+
+  @override
+  String get hhEnd => 'النهاية';
+
+  @override
+  String get hhNoEnd => 'بدون تاريخ نهاية';
+
+  @override
+  String get hhNoEndHint => 'يبقى العرض فعالاً حتى توقفه';
+
+  @override
+  String get hhEndOfDay => 'الليلة 23:59';
+
+  @override
+  String get hhOtherDate => 'تاريخ آخر…';
+
+  @override
+  String hhEndsAt(String date) {
+    return 'ينتهي $date';
+  }
+
+  @override
+  String get hhEndInPast => 'يجب أن تكون النهاية في المستقبل';
+
+  @override
+  String get hhQuantity => 'الكمية بهذا السعر';
+
+  @override
+  String get hhUnlimited => 'غير محدودة';
+
+  @override
+  String get hhLimited => 'محدودة';
+
+  @override
+  String get hhQuantityHint => 'مثال: 7';
+
+  @override
+  String get hhQuantityInvalid => 'أدخل كمية 1 أو أكثر';
+
+  @override
+  String get hhQuantityHelp => 'يتوقف العرض تلقائياً عند نفاد الكمية';
+
+  @override
+  String get hhLiveInfo => 'يرى الزبائن العرض فور تفعيله.';
+
+  @override
+  String get hhActiveNow => 'فعّال الآن';
+
+  @override
+  String get hhUpdate => 'تحديث الساعة السعيدة';
+
+  @override
+  String hhUnitsLeft(int count) {
+    return 'متبقي $count';
+  }
+
+  @override
   String get selectCategory => 'يرجى اختيار أو تحديد فئة.';
 
   @override

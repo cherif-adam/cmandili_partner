@@ -7,8 +7,10 @@
 /// query then filters straight back out. Everything else lives in
 /// `vendor_items`, which is category-agnostic.
 ///
-/// Restaurant-only concepts (prep time, vegetarian, happy hour, variants) are
-/// deliberately absent: they are meaningless for a bouquet or a phone case.
+/// Restaurant-only concepts (prep time, vegetarian, variants) are deliberately
+/// absent: they are meaningless for a bouquet or a phone case. Happy hour is
+/// not — a gift shop can discount a batch just like a pizzeria — so the
+/// shared `discount_*` columns are carried here too.
 class VendorItem {
   final String id;
   final String vendorId;
@@ -27,6 +29,14 @@ class VendorItem {
   final bool isAvailable;
   final int sortOrder;
 
+  /// Happy hour, same columns as food/grocery: the reduced price, an optional
+  /// end (null = runs until the partner stops it) and an optional limited
+  /// quantity (null = unlimited). Read-only here; written by
+  /// MenuRepository.setHappyHour, never by [toUpdateJson].
+  final double? discountPrice;
+  final String? discountEndTime;
+  final int? discountQuantity;
+
   const VendorItem({
     required this.id,
     required this.vendorId,
@@ -38,6 +48,9 @@ class VendorItem {
     this.unit,
     this.isAvailable = true,
     this.sortOrder = 0,
+    this.discountPrice,
+    this.discountEndTime,
+    this.discountQuantity,
   });
 
   factory VendorItem.fromJson(Map<String, dynamic> json) {
@@ -56,6 +69,10 @@ class VendorItem {
       unit: json['unit'] as String?,
       isAvailable: json['is_available'] as bool? ?? true,
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+      discountPrice: (json['discount_price'] as num?)?.toDouble() ??
+          double.tryParse('${json['discount_price'] ?? ''}'),
+      discountEndTime: json['discount_end_time'] as String?,
+      discountQuantity: (json['discount_quantity'] as num?)?.toInt(),
     );
   }
 
@@ -94,6 +111,9 @@ class VendorItem {
       unit: unit ?? this.unit,
       isAvailable: isAvailable ?? this.isAvailable,
       sortOrder: sortOrder ?? this.sortOrder,
+      discountPrice: discountPrice,
+      discountEndTime: discountEndTime,
+      discountQuantity: discountQuantity,
     );
   }
 }

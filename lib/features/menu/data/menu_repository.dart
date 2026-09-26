@@ -177,21 +177,30 @@ class MenuRepository {
 
   // ─── Happy Hour (cross-app) ──────────────────────────────────────────────────
 
-  /// Sets happy hour discount on a food_item or grocery_item.
-  /// When this writes discount_price + discount_end_time,
-  /// cmandili_mobile's happyHourRestaurantsProvider picks it up automatically.
+  /// Starts a happy hour on one item, now.
+  ///
+  /// [endTime] null means "no end date": the deal runs until the partner
+  /// stops it (or, with a [quantity], until that batch sells out -- the
+  /// consume_happy_hour_quantity trigger counts it down per order line and
+  /// ends the deal at zero). [quantity] null means unlimited.
+  ///
+  /// Written straight to `vendor_items`, not through the food_items /
+  /// grocery_items views: those are category-filtered, so a gift shop's or a
+  /// florist's item matched no row there and the write silently did nothing.
+  /// Every item id in the app is a vendor_items id, and the owner-write
+  /// policy (owns_vendor) lets a partner update their own rows directly.
   Future<bool> setHappyHour({
     required String itemId,
-    required bool isGrocery,
     required double discountPrice,
-    required DateTime endTime,
+    DateTime? endTime,
     int? quantity,
   }) async {
     try {
-      final table = isGrocery ? 'grocery_items' : 'food_items';
-      final rows = await _supabase.from(table).update({
+      final rows = await _supabase.from('vendor_items').update({
         'discount_price': discountPrice,
-        'discount_end_time': endTime.toIso8601String(),
+        // UTC so the TIMESTAMPTZ column stores the instant the partner meant,
+        // not the same wall-clock read as UTC (an hour off in Tunisia).
+        'discount_end_time': endTime?.toUtc().toIso8601String(),
         'discount_quantity': quantity,
       }).eq('id', itemId).select('id');
       // RLS filters rows, it does not raise: an UPDATE a partner is not
@@ -206,20 +215,16 @@ class MenuRepository {
     }
   }
 
-  /// Clears happy hour — item disappears from mobile's happy hour list.
-  Future<bool> clearHappyHour(String itemId, bool isGrocery) async {
+  /// Stops the happy hour -- the item disappears from the client's lists and
+  /// goes back to its normal price.
+  Future<bool> clearHappyHour(String itemId) async {
     try {
-      final table = isGrocery ? 'grocery_items' : 'food_items';
-      final rows = await _supabase.from(table).update({
+      final rows = await _supabase.from('vendor_items').update({
         'discount_price': null,
         'discount_end_time': null,
         'discount_quantity': null,
       }).eq('id', itemId).select('id');
-      // RLS filters rows, it does not raise: an UPDATE a partner is not
-      // allowed to make comes back 200 with zero rows and supabase-dart never
-      // throws. "No exception" is therefore not "saved" -- asking for the row
-      // back is the only way to tell the difference, and without it the app
-      // reported success on a write that changed nothing.
+      // Same zero-rows-means-refused rule as setHappyHour.
       return rows.isNotEmpty;
     } catch (e) {
       debugPrint('Error clearing happy hour: $e');

@@ -542,19 +542,24 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
     final name = fi?.name ?? gi?.name ?? vi?.name ?? '';
     final price = fi?.price ?? gi?.price ?? vi?.price ?? 0.0;
     final imageUrl = fi?.imageUrl ?? gi?.imageUrl ?? vi?.imageUrl ?? '';
-    // Happy hour stays null for vendor items -- the concept does not exist on
-    // that table, so the badge simply never shows for those categories.
     final category = fi?.category ??
         gi?.category.toString().split('.').last ??
         vi?.category ??
         '';
-    final hasHappyHour =
-        (fi?.discountPrice != null && fi?.discountEndTime != null) ||
-            (gi?.discountPrice != null && gi?.discountEndTime != null);
-    final discountPrice = fi?.discountPrice ?? gi?.discountPrice;
-    final discountEndTime = fi?.discountEndTime ?? gi?.discountEndTime;
-    final discountQuantity = fi?.discountQuantity ?? gi?.discountQuantity;
-    final itemId = fi?.id ?? gi?.id ?? '';
+    final discountPrice =
+        fi?.discountPrice ?? gi?.discountPrice ?? vi?.discountPrice;
+    final discountEndTime =
+        fi?.discountEndTime ?? gi?.discountEndTime ?? vi?.discountEndTime;
+    final discountQuantity =
+        fi?.discountQuantity ?? gi?.discountQuantity ?? vi?.discountQuantity;
+    // A deal with no end date runs until the partner stops it, so only a
+    // price is required; one with an end is live until that moment passes.
+    final parsedEnd = discountEndTime != null
+        ? DateTime.tryParse(discountEndTime)?.toLocal()
+        : null;
+    final hasHappyHour = discountPrice != null &&
+        (parsedEnd == null || parsedEnd.isAfter(DateTime.now()));
+    final itemId = fi?.id ?? gi?.id ?? vi?.id ?? '';
 
     return Container(
       decoration: BoxDecoration(
@@ -643,7 +648,7 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                         children: [
                           Text(
                             hasHappyHour
-                                ? '${discountPrice!.toStringAsFixed(2)} DT'
+                                ? '${discountPrice.toStringAsFixed(2)} DT'
                                 : '${price.toStringAsFixed(2)} DT',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
@@ -663,6 +668,19 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                                 decoration: TextDecoration.lineThrough,
                               ),
                             ),
+                            // Remaining units of a limited batch, counted
+                            // down by the database as customers order.
+                            if (discountQuantity != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                l.hhUnitsLeft(discountQuantity),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                       ),
@@ -707,10 +725,9 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                     ),
                   ).then((_) => ref.invalidate(menuItemsProvider)),
                 ),
-                // Hidden for vendor items: HappyHourSetupScreen only knows the
-                // two legacy tables, and `isGrocery` would aim the write at
-                // grocery_items for an id that lives in vendor_items.
-                if (vi == null) ...[
+                // Every category, vendor items included: the setup writes
+                // vendor_items directly, where all item ids live.
+                ...[
                   _divider(),
                   _actionButton(
                     context,
@@ -724,9 +741,8 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                           itemId: itemId,
                           itemName: name,
                           originalPrice: price,
-                          isGrocery: !widget.isRestaurant,
                           currentDiscountPrice: discountPrice,
-                          currentEndTime: discountEndTime != null ? DateTime.tryParse(discountEndTime) : null,
+                          currentEndTime: parsedEnd,
                           currentQuantity: discountQuantity,
                         ),
                       ),

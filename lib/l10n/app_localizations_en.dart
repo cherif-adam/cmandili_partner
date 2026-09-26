@@ -389,6 +389,90 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearHappyHour => 'Clear Happy Hour';
 
   @override
+  String hhNormalPrice(String price) {
+    return 'Normal price: $price DT';
+  }
+
+  @override
+  String get hhNewPrice => 'Happy hour price (DT)';
+
+  @override
+  String get hhPriceRequired => 'Enter the happy hour price';
+
+  @override
+  String get hhPriceInvalid => 'Enter a valid price';
+
+  @override
+  String hhPriceTooHigh(String price) {
+    return 'Must be lower than the normal price ($price DT)';
+  }
+
+  @override
+  String get hhQuickDiscount => 'Quick discount';
+
+  @override
+  String get hhStart => 'Start';
+
+  @override
+  String get hhStartsNow => 'Now, as soon as you activate';
+
+  @override
+  String get hhEnd => 'End';
+
+  @override
+  String get hhNoEnd => 'No end date';
+
+  @override
+  String get hhNoEndHint => 'Runs until you stop it';
+
+  @override
+  String get hhEndOfDay => 'Tonight 23:59';
+
+  @override
+  String get hhOtherDate => 'Other date…';
+
+  @override
+  String hhEndsAt(String date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String get hhEndInPast => 'The end must be in the future';
+
+  @override
+  String get hhQuantity => 'Quantity at this price';
+
+  @override
+  String get hhUnlimited => 'Unlimited';
+
+  @override
+  String get hhLimited => 'Limited';
+
+  @override
+  String get hhQuantityHint => 'e.g. 7';
+
+  @override
+  String get hhQuantityInvalid => 'Enter a quantity of 1 or more';
+
+  @override
+  String get hhQuantityHelp =>
+      'The offer stops automatically once they are sold out';
+
+  @override
+  String get hhLiveInfo => 'Customers see the deal as soon as you activate it.';
+
+  @override
+  String get hhActiveNow => 'Active now';
+
+  @override
+  String get hhUpdate => 'Update Happy Hour';
+
+  @override
+  String hhUnitsLeft(int count) {
+    return '$count left';
+  }
+
+  @override
   String get selectCategory => 'Please select or specify a category.';
 
   @override

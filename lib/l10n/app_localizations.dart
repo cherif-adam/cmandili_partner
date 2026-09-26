@@ -844,6 +844,156 @@ abstract class AppLocalizations {
   /// **'Clear Happy Hour'**
   String get clearHappyHour;
 
+  /// No description provided for @hhNormalPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal price: {price} DT'**
+  String hhNormalPrice(String price);
+
+  /// No description provided for @hhNewPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Happy hour price (DT)'**
+  String get hhNewPrice;
+
+  /// No description provided for @hhPriceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the happy hour price'**
+  String get hhPriceRequired;
+
+  /// No description provided for @hhPriceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid price'**
+  String get hhPriceInvalid;
+
+  /// No description provided for @hhPriceTooHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be lower than the normal price ({price} DT)'**
+  String hhPriceTooHigh(String price);
+
+  /// No description provided for @hhQuickDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick discount'**
+  String get hhQuickDiscount;
+
+  /// No description provided for @hhStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get hhStart;
+
+  /// No description provided for @hhStartsNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now, as soon as you activate'**
+  String get hhStartsNow;
+
+  /// No description provided for @hhEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get hhEnd;
+
+  /// No description provided for @hhNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'No end date'**
+  String get hhNoEnd;
+
+  /// No description provided for @hhNoEndHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs until you stop it'**
+  String get hhNoEndHint;
+
+  /// No description provided for @hhEndOfDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonight 23:59'**
+  String get hhEndOfDay;
+
+  /// No description provided for @hhOtherDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Other date…'**
+  String get hhOtherDate;
+
+  /// No description provided for @hhEndsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}'**
+  String hhEndsAt(String date);
+
+  /// No description provided for @hhEndInPast.
+  ///
+  /// In en, this message translates to:
+  /// **'The end must be in the future'**
+  String get hhEndInPast;
+
+  /// No description provided for @hhQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity at this price'**
+  String get hhQuantity;
+
+  /// No description provided for @hhUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get hhUnlimited;
+
+  /// No description provided for @hhLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Limited'**
+  String get hhLimited;
+
+  /// No description provided for @hhQuantityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 7'**
+  String get hhQuantityHint;
+
+  /// No description provided for @hhQuantityInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a quantity of 1 or more'**
+  String get hhQuantityInvalid;
+
+  /// No description provided for @hhQuantityHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The offer stops automatically once they are sold out'**
+  String get hhQuantityHelp;
+
+  /// No description provided for @hhLiveInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers see the deal as soon as you activate it.'**
+  String get hhLiveInfo;
+
+  /// No description provided for @hhActiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Active now'**
+  String get hhActiveNow;
+
+  /// No description provided for @hhUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Happy Hour'**
+  String get hhUpdate;
+
+  /// No description provided for @hhUnitsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String hhUnitsLeft(int count);
+
   /// No description provided for @selectCategory.
   ///
   /// In en, this message translates to:
