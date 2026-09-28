@@ -217,14 +217,16 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
               ),
             ),
 
-            if (_hasPromo && !widget.isCategory) ...[
+            if (_hasPromo || widget.isCategory) ...[
               const SizedBox(height: 10),
               SizedBox(
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: _isLoading ? null : _stop,
                   icon: const Icon(Icons.close_rounded),
-                  label: const Text('Arrêter la promotion'),
+                  label: Text(widget.isCategory
+                      ? 'Arrêter la promotion de la rubrique'
+                      : 'Arrêter la promotion'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,
                     side: const BorderSide(color: AppColors.error),
@@ -332,7 +334,30 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
 
   Future<void> _stop() async {
     setState(() => _isLoading = true);
-    final ok = await ref.read(menuRepositoryProvider).clearPromo(widget.itemId!);
+    final repo = ref.read(menuRepositoryProvider);
+
+    // Ce qui a été posé en une action doit pouvoir être retiré en une action :
+    // un commerçant qui a bradé quarante références ne va pas les rouvrir une
+    // par une.
+    if (widget.isCategory) {
+      final count = await repo.clearPromoForCategory(
+        vendorId: widget.vendorId!,
+        category: widget.categoryName!,
+      );
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ref.invalidate(menuItemsProvider);
+      Navigator.pop(context);
+      _snack(
+        count == 0
+            ? 'Aucune promotion à arrêter dans cette rubrique.'
+            : '$count article(s) revenus à leur prix normal.',
+        count == 0 ? AppColors.textLight : AppColors.success,
+      );
+      return;
+    }
+
+    final ok = await repo.clearPromo(widget.itemId!);
     if (!mounted) return;
     setState(() => _isLoading = false);
     if (!ok) {

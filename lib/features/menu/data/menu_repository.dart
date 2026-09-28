@@ -327,6 +327,40 @@ class MenuRepository {
     }
   }
 
+  /// Arrete la promotion de TOUS les articles d'une rubrique.
+  ///
+  /// Le pendant de setPercentPromoForCategory : ce qui a ete pose en une
+  /// action doit pouvoir etre retire en une action. Sans cela, un commercant
+  /// qui a brade quarante references devrait les rouvrir une par une.
+  ///
+  /// Un seul UPDATE suffit ici, contrairement a la pose : mettre les colonnes
+  /// a NULL est la meme ecriture pour toutes les lignes.
+  ///
+  /// Renvoie le nombre d'articles effectivement liberes.
+  Future<int> clearPromoForCategory({
+    required String vendorId,
+    required String category,
+  }) async {
+    try {
+      final rows = await _supabase
+          .from('vendor_items')
+          .update({
+            'discount_percent': null,
+            'discount_price': null,
+            'discount_start_time': null,
+            'discount_end_time': null,
+            'discount_quantity': null,
+          })
+          .eq('vendor_id', vendorId)
+          .eq('category', category)
+          .select('id');
+      return (rows as List).length;
+    } catch (e) {
+      debugPrint('Error clearing category promo: $e');
+      return 0;
+    }
+  }
+
   /// Arrete la promotion : l'article revient a son prix normal et sort des
   /// listes de promotions du client.
   Future<bool> clearPromo(String itemId) async {
