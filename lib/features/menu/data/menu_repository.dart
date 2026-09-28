@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/food_item.dart';
 import 'models/grocery_item.dart';
 import 'models/item_variant.dart';
+import '../../../core/utils/promo_price.dart';
 
 class MenuRepository {
   final _supabase = Supabase.instance.client;
@@ -232,6 +233,118 @@ class MenuRepository {
     }
   }
 
+  // ─── Promotions en pourcentage (categories "percent") ──────────────────────
+
+  /// Pose une promotion en pourcentage sur UN article.
+  ///
+  /// `discount_price` reste la source de verite du prix : c'est lui que lisent
+  /// le panier, la commission et le client. `discount_percent` n'est conserve
+  /// que pour afficher le badge "-X%" et pouvoir recalculer sans arrondi.
+  ///
+  /// Le prix est arrondi au millime, l'unite reelle du dinar tunisien : un
+  /// prix a plus de trois decimales ne peut pas etre encaisse.
+  Future<bool> setPercentPromo({
+    required String itemId,
+    required double originalPrice,
+    required double percent,
+    DateTime? startTime,
+    DateTime? endTime,
+  }) async {
+    // Une promotion PROGRAMMEE n'ecrit pas encore son prix.
+    //
+    // Tout ce qui lit une remise aujourd'hui -- le panier, la commission, le
+    // client, l'admin -- ne regarde que `discount_price` et la date de FIN :
+    // personne ne verifie le debut. Poser le prix tout de suite ferait donc
+    // partir la promotion immediatement, une semaine avant la date choisie.
+    // Le prix est materialise a l'instant du debut par le cron
+    // activate_scheduled_promotions. Tant que ce prix est NULL, chaque
+    // lecteur existant se comporte correctement sans avoir ete modifie.
+    final startsLater = startTime != null && startTime.isAfter(DateTime.now());
+
+    try {
+      final rows = await _supabase.from('vendor_items').update({
+        'discount_percent': percent,
+        'discount_price':
+            startsLater ? null : computePromoPrice(originalPrice, percent),
+        // UTC : la colonne est un TIMESTAMPTZ, et une heure locale envoyee
+        // sans fuseau serait relue comme de l'UTC -- une heure d'ecart en
+        // Tunisie.
+        'discount_start_time': startTime?.toUtc().toIso8601String(),
+        'discount_end_time': endTime?.toUtc().toIso8601String(),
+        // Une promotion en pourcentage n'a pas de lot limite : le compteur du
+        // Happy Hour n'a pas a trainer d'une configuration a l'autre.
+        'discount_quantity': null,
+      }).eq('id', itemId).select('id');
+      return rows.isNotEmpty;
+    } catch (e) {
+      debugPrint('Error setting percent promo: $e');
+      return false;
+    }
+  }
+
+  /// La meme promotion sur TOUS les articles d'une categorie de la boutique,
+  /// en une action.
+  ///
+  /// Chaque article garde son propre prix remise, calcule depuis SON prix :
+  /// un pourcentage unique ne veut pas dire un prix unique. D'ou la mise a
+  /// jour ligne par ligne plutot qu'un seul UPDATE -- PostgREST ne sait pas
+  /// ecrire une valeur differente par ligne en un appel.
+  ///
+  /// Renvoie le nombre d'articles effectivement mis a jour, pour que l'ecran
+  /// puisse dire "12 articles en promotion" plutot qu'un vague succes.
+  Future<int> setPercentPromoForCategory({
+    required String vendorId,
+    required String category,
+    required double percent,
+    DateTime? startTime,
+    DateTime? endTime,
+  }) async {
+    try {
+      final items = await _supabase
+          .from('vendor_items')
+          .select('id, price')
+          .eq('vendor_id', vendorId)
+          .eq('category', category);
+
+      var done = 0;
+      for (final row in (items as List)) {
+        final id = row['id']?.toString();
+        final price = (row['price'] as num?)?.toDouble();
+        if (id == null || price == null) continue;
+        final ok = await setPercentPromo(
+          itemId: id,
+          originalPrice: price,
+          percent: percent,
+          startTime: startTime,
+          endTime: endTime,
+        );
+        if (ok) done++;
+      }
+      return done;
+    } catch (e) {
+      debugPrint('Error setting category promo: $e');
+      return 0;
+    }
+  }
+
+  /// Arrete la promotion : l'article revient a son prix normal et sort des
+  /// listes de promotions du client.
+  Future<bool> clearPromo(String itemId) async {
+    try {
+      final rows = await _supabase.from('vendor_items').update({
+        'discount_percent': null,
+        'discount_price': null,
+        'discount_start_time': null,
+        'discount_end_time': null,
+        'discount_quantity': null,
+      }).eq('id', itemId).select('id');
+      return rows.isNotEmpty;
+    } catch (e) {
+      debugPrint('Error clearing promo: $e');
+      return false;
+    }
+  }
+
   // ─── Item Variants (cross-app) ─────────────────────────────────────────────
 
   /// Loads variants for one food/grocery item, ordered by sort_order.
@@ -386,6 +499,11 @@ class MenuRepository {
       'discountPrice': db['discount_price'],
       'discountEndTime': db['discount_end_time'],
       'discountQuantity': db['discount_quantity'],
+      // Absentes de la vue tant que le complement SQL de la phase 2 n'est pas
+      // passe : la lecture reste nulle, l'ecran affiche simplement la remise
+      // sans son pourcentage ni son etat "programmee".
+      'discountPercent': db['discount_percent'],
+      'discountStartTime': db['discount_start_time'],
     };
   }
 

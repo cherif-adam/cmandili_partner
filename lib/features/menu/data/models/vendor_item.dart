@@ -37,6 +37,14 @@ class VendorItem {
   final String? discountEndTime;
   final int? discountQuantity;
 
+  /// Promotion en pourcentage : le taux applique, et le debut de la fenetre.
+  ///
+  /// Une promotion PROGRAMMEE se reconnait a [discountPercent] renseigne alors
+  /// que [discountPrice] est encore nul -- le prix n'est pose qu'a l'instant
+  /// du debut, pour qu'aucun lecteur ne fasse partir la remise en avance.
+  final double? discountPercent;
+  final String? discountStartTime;
+
   const VendorItem({
     required this.id,
     required this.vendorId,
@@ -51,6 +59,8 @@ class VendorItem {
     this.discountPrice,
     this.discountEndTime,
     this.discountQuantity,
+    this.discountPercent,
+    this.discountStartTime,
   });
 
   factory VendorItem.fromJson(Map<String, dynamic> json) {
@@ -73,6 +83,8 @@ class VendorItem {
           double.tryParse('${json['discount_price'] ?? ''}'),
       discountEndTime: json['discount_end_time'] as String?,
       discountQuantity: (json['discount_quantity'] as num?)?.toInt(),
+      discountPercent: (json['discount_percent'] as num?)?.toDouble(),
+      discountStartTime: json['discount_start_time'] as String?,
     );
   }
 
@@ -114,6 +126,8 @@ class VendorItem {
       discountPrice: discountPrice,
       discountEndTime: discountEndTime,
       discountQuantity: discountQuantity,
+      discountPercent: discountPercent,
+      discountStartTime: discountStartTime,
     );
   }
 }

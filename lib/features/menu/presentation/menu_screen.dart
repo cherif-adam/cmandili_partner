@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
+import '../../../core/providers/shop_settings_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/promo_price.dart';
 import '../providers/menu_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../data/models/food_item.dart';
@@ -10,6 +12,7 @@ import '../data/models/grocery_item.dart';
 import '../data/models/vendor_item.dart';
 import 'add_edit_item_screen.dart';
 import 'happy_hour_setup_screen.dart';
+import 'promo_setup_screen.dart';
 import '../providers/menu_scanner_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -37,6 +40,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final isRestaurant = profileAsync.value?.partnerType == 'restaurant';
     final l = AppLocalizations.of(context)!;
+    // Les commerces en pourcentage peuvent remiser toute une rubrique d'un
+    // coup ; un restaurant pose ses Happy Hour plat par plat, l'action n'a pas
+    // de sens pour lui et n'apparaît donc pas.
+    final usesPercent =
+        ref.watch(shopSettingsProvider).valueOrNull?.usesPercent ?? false;
 
     ref.listen<MenuScannerState>(menuScannerProvider, (previous, next) {
       if (next.error != null && next.error != previous?.error) {
@@ -63,6 +71,12 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             pinned: true,
             backgroundColor: Colors.transparent,
             actions: [
+              if (usesPercent)
+                IconButton(
+                  icon: const Icon(Icons.sell_rounded, color: Colors.white),
+                  tooltip: 'Promo sur une catégorie',
+                  onPressed: () => _showCategoryPromoSheet(context),
+                ),
               IconButton(
                 icon: const Icon(Icons.document_scanner_rounded, color: Colors.white),
                 tooltip: l.scanMenu,
@@ -356,6 +370,100 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
   }
 
+  /// Choix de la rubrique à remiser en une action.
+  ///
+  /// Le commerçant choisit une rubrique de SA boutique ("Bouquets",
+  /// "Boissons"), pas la catégorie de commerce : c'est à ce niveau qu'une
+  /// bradèrie se décide. Le nombre d'articles est affiché parce qu'une remise
+  /// posée sur 40 références d'un seul geste mérite d'être comptée avant, pas
+  /// découverte après.
+  void _showCategoryPromoSheet(BuildContext context) {
+    final items = ref.read(menuItemsProvider).valueOrNull ?? const [];
+    final vendorId = ref.read(partnerProfileProvider).valueOrNull?.entityId;
+    final categories = _extractCategories(items);
+
+    if (vendorId == null || categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aucune rubrique à remiser pour le moment.',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
+              child: Text('Promo sur une catégorie',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'Le même pourcentage sur tous les articles de la rubrique.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: categories.map((c) {
+                  final count = _countInCategory(items, c);
+                  return ListTile(
+                    leading: const Icon(Icons.sell_rounded,
+                        color: AppColors.primary),
+                    title: Text(c),
+                    subtitle: Text('$count article(s)'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PromoSetupScreen(
+                            itemName: c,
+                            originalPrice: 0,
+                            categoryName: c,
+                            vendorId: vendorId,
+                            categoryItemCount: count,
+                          ),
+                        ),
+                      ).then((_) => ref.invalidate(menuItemsProvider));
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _countInCategory(List<dynamic> items, String category) {
+    return items.where((item) {
+      if (item is FoodItem) return item.category == category;
+      if (item is GroceryItem) {
+        return item.category.toString().split('.').last == category;
+      }
+      if (item is VendorItem) return item.category == category;
+      return false;
+    }).length;
+  }
+
   List<String> _extractCategories(List<dynamic> items) {
     final cats = <String>{};
     for (final item in items) {
@@ -561,6 +669,35 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
         (parsedEnd == null || parsedEnd.isAfter(DateTime.now()));
     final itemId = fi?.id ?? gi?.id ?? vi?.id ?? '';
 
+    // Le mode de remise vient de la categorie de la boutique, pas du type
+    // d'article : la meme carte sert un restaurant (Happy Hour) et un
+    // fleuriste (promotion en pourcentage).
+    final usesPercent =
+        ref.watch(shopSettingsProvider).valueOrNull?.usesPercent ?? false;
+    final promoColor = usesPercent ? AppColors.primary : AppColors.secondary;
+
+    // FoodItem ne porte pas ces colonnes : la categorie food est en Happy
+    // Hour, elle n'a pas de pourcentage a afficher.
+    final discountPercent = gi?.discountPercent ?? vi?.discountPercent;
+    final discountStartTime = gi?.discountStartTime ?? vi?.discountStartTime;
+    final parsedStart = discountStartTime != null
+        ? DateTime.tryParse(discountStartTime)?.toLocal()
+        : null;
+
+    // Une promotion PROGRAMMEE porte son taux sans porter encore son prix :
+    // celui-ci n'est pose qu'a l'instant du debut, pour qu'aucun ecran client
+    // ne fasse partir la remise en avance. Sans cet etat, le commercant qui
+    // programme une braderie pour samedi ne verrait rien sur sa carte et
+    // croirait que l'enregistrement a echoue.
+    final isScheduled = discountPrice == null &&
+        discountPercent != null &&
+        (parsedEnd == null || parsedEnd.isAfter(DateTime.now()));
+
+    // Le taux stocke s'il existe, sinon deduit des deux prix -- une remise
+    // posee depuis l'ecran Happy Hour n'enregistre qu'un prix.
+    final shownPercent =
+        discountPercent ?? percentFromPrices(price, discountPrice);
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -611,29 +748,20 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                                 overflow: TextOverflow.ellipsis),
                           ),
                           if (hasHappyHour)
-                            Container(
-                              margin: const EdgeInsets.only(left: 6),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                      Icons.local_fire_department_rounded,
-                                      size: 11,
-                                      color: AppColors.secondary),
-                                  const SizedBox(width: 3),
-                                  Text(l.happyHourBadge,
-                                      style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.secondary)),
-                                ],
-                              ),
+                            _badge(
+                              icon: usesPercent
+                                  ? Icons.sell_rounded
+                                  : Icons.local_fire_department_rounded,
+                              label: usesPercent && shownPercent != null
+                                  ? '−${_trimPercent(shownPercent)} %'
+                                  : l.happyHourBadge,
+                              color: promoColor,
+                            )
+                          else if (isScheduled)
+                            _badge(
+                              icon: Icons.schedule_rounded,
+                              label: '−${_trimPercent(discountPercent)} %',
+                              color: AppColors.info,
                             ),
                         ],
                       ),
@@ -654,7 +782,7 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
                               color: hasHappyHour
-                                  ? AppColors.secondary
+                                  ? promoColor
                                   : AppColors.textPrimary,
                             ),
                           ),
@@ -684,6 +812,16 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                           ],
                         ],
                       ),
+                      if (isScheduled && parsedStart != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Démarre le ${_formatShort(parsedStart)}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.info),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -727,8 +865,35 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                 ),
                 // Every category, vendor items included: the setup writes
                 // vendor_items directly, where all item ids live.
-                ...[
-                  _divider(),
+                //
+                // Happy Hour ou Promotion : la catégorie de la boutique
+                // tranche, pas l'écran. Un restaurant pose un prix tout de
+                // suite, un fleuriste programme un pourcentage entre deux
+                // dates -- ce sont deux gestes de commerce différents, pas
+                // deux habillages du même bouton.
+                _divider(),
+                if (usesPercent)
+                  _actionButton(
+                    context,
+                    icon: Icons.sell_rounded,
+                    label: 'Promo',
+                    color: AppColors.primary,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PromoSetupScreen(
+                          itemId: itemId,
+                          itemName: name,
+                          originalPrice: price,
+                          currentDiscountPrice: discountPrice,
+                          currentPercent: shownPercent,
+                          currentStartTime: parsedStart,
+                          currentEndTime: parsedEnd,
+                        ),
+                      ),
+                    ).then((_) => ref.invalidate(menuItemsProvider)),
+                  )
+                else
                   _actionButton(
                     context,
                     icon: Icons.local_fire_department_rounded,
@@ -748,7 +913,6 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
                       ),
                     ).then((_) => ref.invalidate(menuItemsProvider)),
                   ),
-                ],
                 _divider(),
                 _actionButton(
                   context,
@@ -764,6 +928,45 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
         ],
       ),
     );
+  }
+
+  /// Pastille de remise, la même forme pour les trois états (Happy Hour,
+  /// promotion en cours, promotion programmée) : seuls l'icône, le texte et
+  /// la couleur changent.
+  Widget _badge({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 3),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+        ],
+      ),
+    );
+  }
+
+  /// "20", pas "20.0" : un taux entier s'écrit sans décimale.
+  static String _trimPercent(double? v) {
+    if (v == null) return '';
+    return v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+  }
+
+  static String _formatShort(DateTime d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.day)}/${two(d.month)} à ${two(d.hour)}:${two(d.minute)}';
   }
 
   Widget _imagePlaceholder() {

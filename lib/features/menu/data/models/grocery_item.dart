@@ -15,6 +15,14 @@ class GroceryItem {
   final String? discountEndTime;
   final int? discountQuantity;
 
+  /// Promotion en pourcentage : le taux applique, et le debut de la fenetre.
+  ///
+  /// Une promotion PROGRAMMEE se reconnait a [discountPercent] renseigne alors
+  /// que [discountPrice] est encore nul -- le prix n'est pose qu'a l'instant
+  /// du debut, pour qu'aucun lecteur ne fasse partir la remise en avance.
+  final double? discountPercent;
+  final String? discountStartTime;
+
   GroceryItem({
     required this.id,
     required this.supermarketId,
@@ -29,6 +37,8 @@ class GroceryItem {
     this.discountPrice,
     this.discountEndTime,
     this.discountQuantity,
+    this.discountPercent,
+    this.discountStartTime,
   });
 
   factory GroceryItem.fromJson(Map<String, dynamic> json) {
@@ -51,6 +61,8 @@ class GroceryItem {
       discountPrice: (json['discountPrice'] as num?)?.toDouble(),
       discountEndTime: json['discountEndTime'] as String?,
       discountQuantity: json['discountQuantity'] as int?,
+      discountPercent: (json['discountPercent'] as num?)?.toDouble(),
+      discountStartTime: json['discountStartTime'] as String?,
     );
   }
 }
