@@ -12,10 +12,28 @@ enum OrderStatus {
   cancelled,
 }
 
+/// Ce que la commande livre.
+///
+/// Les sept premieres valeurs sont les CATEGORIES DE COMMERCE, avec les memes
+/// identifiants que `vendors.category` et `vendor_categories.id` : une seule
+/// liste a tenir pour toute la plateforme.
+///
+/// `supermarket` et `billPayment` ne sont plus jamais ecrites. Elles restent
+/// pour que les commandes enregistrees avant la migration 20260930090000
+/// continuent de se lire -- les supprimer les ferait toutes retomber sur
+/// `food` au parsing. `facture` manquait ici alors que la base l'ecrit depuis
+/// juin : une commande de facture se lisait donc `food` dans l'app partenaire.
 enum OrderType {
   food,
-  supermarket,
+  grocery,
+  bakery,
+  flowers,
+  pets,
+  gifts,
+  electronics,
   courier,
+  facture,
+  supermarket,
   billPayment,
 }
 
