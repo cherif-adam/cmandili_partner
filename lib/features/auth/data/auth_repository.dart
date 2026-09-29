@@ -212,7 +212,24 @@ class AuthRepository {
     }
   }
 
-  // Update partner profile
+  /// Enregistre la fiche du partenaire, dans les DEUX tables.
+  ///
+  /// `partners` est la table du COMPTE partenaire ; `vendors` est la fiche que
+  /// le client consulte. Le nom de la boutique vivait dans les deux, et seule
+  /// la premiere etait ecrite : un commercant renommait sa boutique, l'app
+  /// partenaire affichait le nouveau nom, et le client continuait de voir
+  /// l'ancien indefiniment. Releve du 30/09 : 2 boutiques sur 18 portaient
+  /// deux noms differents, 5 deux descriptions differentes.
+  ///
+  /// La photo, elle, arrivait bien -- parce que quelqu'un avait deja recopie
+  /// cette seule colonne a la main, dans DEUX ecrans differents. C'est cette
+  /// recopie au cas par cas qu'on remplace : un seul chemin d'ecriture, qui
+  /// tient les deux tables ensemble.
+  ///
+  /// `vendors` reste la source de verite cote client. L'ecriture est faite
+  /// ici en plus d'un trigger en base (migration 20260930120000), pour que la
+  /// correction vaille meme sans lui et que les autres ecrivains --
+  /// le tableau de bord admin, un script -- soient couverts par le trigger.
   Future<bool> updatePartnerProfile(PartnerProfile profile) async {
     try {
       await _supabase
@@ -225,6 +242,27 @@ class AuthRepository {
             'avatar_url': profile.avatarUrl ?? '',
           })
           .eq('user_id', profile.userId);
+
+      if (profile.entityId.isNotEmpty) {
+        // Toujours `vendors` : entityId EST vendors.id, et restaurants /
+        // supermarkets ne sont que des vues dessus. Viser une vue selon le
+        // type de partenaire envoyait la fiche d'un fleuriste dans
+        // `supermarkets`, ou elle ne correspondait a aucune ligne.
+        final shopUpdate = <String, dynamic>{
+          'name': profile.businessName,
+          'description': profile.bio ?? '',
+        };
+        // Une image vide n'efface pas celle qui est en place : un partenaire
+        // qui change juste son nom ne doit pas perdre son logo.
+        final avatar = profile.avatarUrl;
+        if (avatar != null && avatar.isNotEmpty) {
+          shopUpdate['image_url'] = avatar;
+        }
+        await _supabase
+            .from('vendors')
+            .update(shopUpdate)
+            .eq('id', profile.entityId);
+      }
       return true;
     } catch (e) {
       debugPrint('Error updating partner profile: $e');

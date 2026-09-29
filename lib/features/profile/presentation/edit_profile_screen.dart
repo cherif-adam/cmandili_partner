@@ -78,34 +78,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         );
       }
 
-      // Sync the picture to the customer-facing entity so the client app's
-      // vendor card shows it. The client reads vendors.image_url;
-      // partners.avatar_url is partner-only, so the logo must be mirrored here
-      // too.
-      //
-      // Mirrors the *effective* avatar, not just a freshly picked one: a save
-      // with no new image still re-asserts the link, which repairs shops whose
-      // avatar predates this mirror or whose earlier upload failed silently and
-      // left vendors.image_url empty (the client then drew its grey storefront
-      // placeholder while the partner app happily showed the picture).
-      final effectiveAvatarUrl = newAvatarUrl ?? profile?.avatarUrl;
-      if (effectiveAvatarUrl != null &&
-          effectiveAvatarUrl.isNotEmpty &&
-          profile != null &&
-          profile.entityId.isNotEmpty) {
-        // Always `vendors`: entityId IS vendors.id, and restaurants /
-        // supermarkets are only views over it. Picking a view by partner type
-        // sent every non-restaurant logo to `supermarkets`, so a florist's or
-        // bakery's picture silently went nowhere.
-        try {
-          await Supabase.instance.client
-              .from('vendors')
-              .update({'image_url': effectiveAvatarUrl})
-              .eq('id', profile.entityId);
-        } catch (e) {
-          debugPrint('Could not sync logo to vendors.image_url: $e');
-        }
-      }
+      // La recopie vers `vendors` vivait ici, et ne portait que l'image : le
+      // nom et la description restaient dans `partners`, invisibles du client.
+      // Elle est maintenant dans updatePartnerProfile, avec les autres champs,
+      // pour qu'un seul endroit decide de ce que le client voit.
 
       if (profile != null) {
         final updatedProfile = profile.copyWith(
