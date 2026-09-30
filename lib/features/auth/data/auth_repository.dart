@@ -85,6 +85,11 @@ class AuthRepository {
     return out.stream;
   }
 
+  /// Y a-t-il une session utilisable maintenant. Apres une inscription, c'est
+  /// faux quand le projet exige une confirmation par email : le compte existe,
+  /// mais l'utilisateur ne peut pas encore entrer.
+  bool get hasSession => _supabase.auth.currentSession != null;
+
   // Sign in with email and password
   Future<User?> signInWithEmail(String email, String password) async {
     final response = await _supabase.auth.signInWithPassword(
@@ -329,7 +334,13 @@ class AuthRepository {
 
   // Sign out
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    // La session Supabase est ce sur quoi l'app s'oriente : elle doit finir
+    // meme si la deconnexion Google echoue (utilisateur jamais passe par Google).
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      debugPrint('signOut: deconnexion Google echouee ($e), on continue');
+    }
     await _supabase.auth.signOut();
   }
 

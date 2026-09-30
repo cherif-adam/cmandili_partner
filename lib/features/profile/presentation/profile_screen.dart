@@ -3,7 +3,6 @@ import '../../auth/data/models/partner_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/presentation/auth_screen.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/providers/localization_provider.dart';
 import '../../../core/providers/theme_provider.dart';
@@ -15,6 +14,26 @@ import '../../auth/presentation/change_password_screen.dart';
 import 'help_support_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
+
+  /// Se deconnecte pour de vrai, puis laisse main.dart afficher l'ecran de
+  /// connexion.
+  ///
+  /// L'ancienne version empilait un AuthScreen avec
+  /// pushAndRemoveUntil(... false) : cela SUPPRIMAIT la route racine, celle
+  /// que main.dart fait basculer entre connexion et accueil. A la connexion
+  /// suivante la racine passait bien a l'accueil -- mais SOUS l'ecran de
+  /// connexion empile, qui restait au-dessus. L'utilisateur etait connecte et
+  /// coince sur le formulaire jusqu'au redemarrage de l'app.
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    // D'abord revenir a la route racine (jeter ce qui a ete empile au-dessus),
+    // pour que ce soit bien la racine qui devienne l'ecran de connexion.
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    try {
+      await ref.read(authRepositoryProvider).signOut();
+    } catch (e) {
+      debugPrint('Deconnexion echouee : $e');
+    }
+  }
   const ProfileScreen({super.key});
 
   @override
@@ -211,16 +230,7 @@ class ProfileScreen extends ConsumerWidget {
                   textColor: AppColors.error,
                   iconColor: AppColors.error,
                   showArrow: false,
-                  onTap: () async {
-                    final authRepo = ref.read(authRepositoryProvider);
-                    await authRepo.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const AuthScreen()),
-                        (route) => false,
-                      );
-                    }
-                  },
+                  onTap: () => _logout(context, ref),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                 ),
