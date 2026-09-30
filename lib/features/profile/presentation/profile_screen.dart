@@ -11,6 +11,7 @@ import 'edit_profile_screen.dart';
 import '../../notifications/presentation/notification_screen.dart';
 import 'business_info_screen.dart';
 import 'payout_screen.dart';
+import '../../auth/presentation/change_password_screen.dart';
 import 'help_support_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -177,6 +178,18 @@ class ProfileScreen extends ConsumerWidget {
                       ? AppLocalizations.of(context)!.darkMode 
                       : AppLocalizations.of(context)!.lightMode,
                   onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+                  screenWidth: screenWidth,
+                  screenHeight: screenHeight,
+                ),
+                _buildProfileItem(
+                  context,
+                  icon: Icons.lock_outline_rounded,
+                  title: AppLocalizations.of(context)!.changePassword,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ChangePasswordScreen()),
+                  ),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                 ),
