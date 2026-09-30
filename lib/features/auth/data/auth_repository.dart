@@ -128,12 +128,20 @@ class AuthRepository {
         .maybeSingle();
 
     String entityId;
-    if (existing != null && existing['entity_id'] != null && existing['partner_type'] == partnerType) {
-      // Reuse the entity already linked to this partner; just rename it.
+    // UNE boutique par compte, toujours. Le test portait aussi sur le type de
+    // partenaire : choisir un autre type creait une SECONDE boutique et
+    // laissait la premiere orpheline, avec ses articles, ses commandes et son
+    // solde rattaches a une fiche que plus personne n'ouvrait. Des qu'une
+    // ligne partners existe avec une boutique, on la renomme -- et on change
+    // sa categorie si le type a change.
+    if (existing != null && existing['entity_id'] != null) {
       entityId = existing['entity_id'] as String;
       await _supabase
           .from('vendors')
-          .update({'name': name})
+          .update({
+            'name': name,
+            'category': vendorCategoryForPartnerType(partnerType),
+          })
           .eq('id', entityId);
     } else {
       // Create a fresh shop row in the generic vendors table.

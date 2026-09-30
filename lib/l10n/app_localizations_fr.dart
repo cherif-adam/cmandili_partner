@@ -264,6 +264,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get completeSetup => 'Finaliser la configuration';
 
   @override
+  String get notAPartnerTitle => 'Ce compte n\'est pas un compte partenaire';
+
+  @override
+  String get notAPartnerBody =>
+      'Vous êtes connecté, mais aucune boutique n\'est liée à ce compte. Connectez-vous avec votre compte partenaire, ou créez une boutique pour celui-ci.';
+
+  @override
+  String get createShop => 'Créer une boutique';
+
+  @override
+  String get shopAlreadyExists =>
+      'Ce compte a déjà une boutique. Elle a été renommée au lieu d\'en créer une seconde.';
+
+  @override
   String get welcomeExclamation => 'Bienvenue !';
 
   @override

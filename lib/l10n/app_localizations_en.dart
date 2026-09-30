@@ -261,6 +261,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get completeSetup => 'Complete Setup';
 
   @override
+  String get notAPartnerTitle => 'This is not a partner account';
+
+  @override
+  String get notAPartnerBody =>
+      'You are signed in, but no shop is linked to this account. Sign in with your partner account, or create a shop for this one.';
+
+  @override
+  String get createShop => 'Create a shop';
+
+  @override
+  String get shopAlreadyExists =>
+      'This account already has a shop. It was renamed instead of creating a second one.';
+
+  @override
   String get welcomeExclamation => 'Welcome!';
 
   @override

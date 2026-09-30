@@ -12,7 +12,7 @@ import '../../menu/presentation/menu_screen.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../orders/providers/partner_orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/presentation/partner_onboarding_screen.dart';
+import '../../auth/presentation/not_a_partner_screen.dart';
 import '../../orders/providers/audio_alert_provider.dart';
 import '../../orders/data/models/order.dart';
 import '../../orders/presentation/incoming_order_dialog.dart';
@@ -401,7 +401,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       error: (err, stack) => Scaffold(body: Center(child: Text('Error loading profile: $err'))),
       data: (profile) {
         if (profile == null) {
-          return const PartnerOnboardingScreen();
+          // Connecte, mais sans boutique. Ce n'est PAS forcement un partenaire
+          // qui debute : ce peut etre un administrateur, un client, un
+          // livreur, ou quelqu'un qui s'est trompe de compte. Ouvrir la
+          // configuration ici a cree une seconde boutique le 30/09, sur un nom
+          // tape pour en retrouver une autre.
+          return const NotAPartnerScreen();
         }
 
         return Scaffold(

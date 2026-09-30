@@ -598,6 +598,30 @@ abstract class AppLocalizations {
   /// **'Complete Setup'**
   String get completeSetup;
 
+  /// No description provided for @notAPartnerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a partner account'**
+  String get notAPartnerTitle;
+
+  /// No description provided for @notAPartnerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You are signed in, but no shop is linked to this account. Sign in with your partner account, or create a shop for this one.'**
+  String get notAPartnerBody;
+
+  /// No description provided for @createShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a shop'**
+  String get createShop;
+
+  /// No description provided for @shopAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'This account already has a shop. It was renamed instead of creating a second one.'**
+  String get shopAlreadyExists;
+
   /// No description provided for @welcomeExclamation.
   ///
   /// In en, this message translates to:

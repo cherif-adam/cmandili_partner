@@ -260,6 +260,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get completeSetup => 'إكمال الإعداد';
 
   @override
+  String get notAPartnerTitle => 'هذا الحساب ليس حساب شريك';
+
+  @override
+  String get notAPartnerBody =>
+      'أنت متصل، لكن لا يوجد متجر مرتبط بهذا الحساب. سجّل الدخول بحساب الشريك، أو أنشئ متجراً لهذا الحساب.';
+
+  @override
+  String get createShop => 'إنشاء متجر';
+
+  @override
+  String get shopAlreadyExists =>
+      'هذا الحساب لديه متجر بالفعل. تمت إعادة تسميته بدل إنشاء متجر ثانٍ.';
+
+  @override
   String get welcomeExclamation => 'مرحباً!';
 
   @override
