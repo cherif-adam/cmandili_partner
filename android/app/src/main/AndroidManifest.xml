@@ -3,6 +3,10 @@
     <!-- Required on Android 13+ to display notifications.
          Without this, FCM messages arrive but the system suppresses them. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Order-watch foreground service (order_watch_service.dart): keeps
+         checking for new orders, and able to ring, after the app is closed. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
@@ -90,6 +94,19 @@
              when the app is terminated and the Dart isolate is killed too quickly.
              super.onMessageReceived() still fires the Dart background handler
              as a bonus for stock Android in-app state updates. -->
+        <!-- flutter_background_service runs the order watch. specialUse (not
+             dataSync): Android 15 stops a dataSync service after 6 h a day,
+             and a shop stays open longer than that. -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false"
+            tools:replace="android:exported">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Alerts the merchant to incoming customer orders while the app is closed" />
+        </service>
+
         <service
             android:name=".CmandiliMessagingService"
             android:exported="false">

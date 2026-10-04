@@ -41,6 +41,9 @@ dependencies:
 
   # HTTP — direct OpenRouter calls for the AI menu scanner
   http: ^1.2.0
+  # Keeps the order-watch alive when the app is closed (see
+  # lib/core/services/order_watch_service.dart). Same package as the driver app.
+  flutter_background_service: ^5.0.5
 
   # Phone call / external launches
   url_launcher: ^6.2.5

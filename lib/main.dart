@@ -16,6 +16,7 @@ import 'core/config/supabase_config.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/push/push_service.dart';
 import 'core/push/notification_navigation.dart';
+import 'core/services/order_watch_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -56,6 +57,9 @@ void main() async {
     // Wire notification-tap deep-linking and drain any cold-start tap that
     // launched the app onto a specific order.
     NotificationNavigation.instance.initialize();
+    // Lets the order-watch service ask this isolate whether the app is alive
+    // and to refresh the session for it (see OrderWatchService).
+    OrderWatchService.attachMain();
   });
 }
 
@@ -67,6 +71,28 @@ class MyApp extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final locale = ref.watch(localizationProvider);
     final themeMode = ref.watch(themeProvider);
+
+    // Order watch: rings for new orders even with the app closed, without
+    // depending on a push reaching the phone. Runs for as long as a partner
+    // with a shop is signed in; stops when they sign out.
+    ref.listen(partnerProfileProvider, (_, next) {
+      final profile = next.valueOrNull;
+      if (profile != null && profile.entityId.isNotEmpty) {
+        OrderWatchService.start(
+          entityId: profile.entityId,
+          partnerType: profile.partnerType,
+          supabaseUrl: SupabaseConfig.url,
+          supabaseAnonKey: SupabaseConfig.anonKey,
+        );
+      }
+    });
+    ref.listen(authStateProvider, (prev, next) {
+      // Only a real sign-out (there WAS a user, now there is none) -- not the
+      // loading state at start-up, which would switch the watch off by itself.
+      if (prev?.valueOrNull != null && next.hasValue && next.value == null) {
+        OrderWatchService.stop();
+      }
+    });
 
     return MaterialApp(
       title: 'Cmandili Partner',
