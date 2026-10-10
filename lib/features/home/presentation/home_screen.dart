@@ -494,6 +494,13 @@ class _DashboardTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Today's order count and revenue were read once, like the balance: a
+    // delivered order did not move them until the app was reopened. Re-read
+    // whenever an order changes (invalidate keeps the old numbers on screen
+    // while the new ones load, so nothing flickers).
+    ref.listen(partnerOrdersStreamProvider, (_, __) {
+      ref.invalidate(dashboardStatsProvider);
+    });
     final statsAsync = ref.watch(dashboardStatsProvider);
     final ordersAsync = ref.watch(partnerOrdersStreamProvider);
     final profileAsync = ref.watch(partnerProfileProvider);
