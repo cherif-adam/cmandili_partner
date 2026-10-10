@@ -379,7 +379,20 @@ class PartnerOrderRepository {
       final row = item as Map<String, dynamic>;
       final quantity = (row['quantity'] as num?)?.toInt() ?? 1;
       final price = (row['price'] as num?)?.toDouble() ?? 0.0;
-      final specialInstructions = row['special_instructions'] as String?;
+      var specialInstructions = row['special_instructions'] as String?;
+      // The client used to save a typed note ONLY inside `options`
+      // ({type: 'text', content: ...}) and never in special_instructions, so
+      // "Instructions spéciales" never showed here. Read it from there when
+      // the column is empty: covers orders placed by older client builds.
+      final rawOptions = row['options'];
+      if ((specialInstructions == null || specialInstructions.trim().isEmpty) &&
+          rawOptions is Map &&
+          rawOptions['type'] == 'text') {
+        final note = rawOptions['content'];
+        if (note is String && note.trim().isNotEmpty) {
+          specialInstructions = note.trim();
+        }
+      }
       // options contains voice/text customization set by the mobile client.
       // Prefer the dedicated voice_note_url column when present — it's the
       // public Supabase Storage URL set by the mobile checkout flow. Fall
