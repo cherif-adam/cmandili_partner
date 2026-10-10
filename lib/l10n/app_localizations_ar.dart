@@ -461,6 +461,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get clearHappyHour => 'مسح الساعة السعيدة';
 
   @override
+  String get bgGuideTitle => 'استقبال الطلبات والتطبيق مغلق';
+
+  @override
+  String get bgGuideBody =>
+      'هذا الهاتف قد يوقف التطبيق في الخلفية. لكي يرنّ المنبّه حتى والتطبيق مغلق:';
+
+  @override
+  String get bgGuideStep1 => 'فعّل «التشغيل التلقائي» لهذا التطبيق.';
+
+  @override
+  String get bgGuideStep2 => 'توفير البطارية: اختر «بدون قيود».';
+
+  @override
+  String get bgGuideOpen => 'فتح الإعدادات';
+
+  @override
+  String get bgGuideDone => 'تم';
+
+  @override
+  String get bgGuideLater => 'لاحقاً';
+
+  @override
   String hhNormalPrice(String price) {
     return 'السعر العادي: $price د.ت';
   }

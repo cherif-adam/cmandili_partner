@@ -465,6 +465,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearHappyHour => 'Clear Happy Hour';
 
   @override
+  String get bgGuideTitle => 'Get orders with the app closed';
+
+  @override
+  String get bgGuideBody =>
+      'This phone can stop the app in the background. So the alarm still rings when the app is closed:';
+
+  @override
+  String get bgGuideStep1 => 'Turn on “Autostart” for this app.';
+
+  @override
+  String get bgGuideStep2 => 'Battery saver: choose “No restrictions”.';
+
+  @override
+  String get bgGuideOpen => 'Open settings';
+
+  @override
+  String get bgGuideDone => 'Done';
+
+  @override
+  String get bgGuideLater => 'Later';
+
+  @override
   String hhNormalPrice(String price) {
     return 'Normal price: $price DT';
   }

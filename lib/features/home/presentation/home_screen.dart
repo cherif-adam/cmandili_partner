@@ -16,6 +16,7 @@ import '../../auth/presentation/not_a_partner_screen.dart';
 import '../../orders/providers/audio_alert_provider.dart';
 import '../../orders/data/models/order.dart';
 import '../../orders/presentation/incoming_order_dialog.dart';
+import '../../../core/widgets/background_guide.dart';
 
 // Tracks shop open/closed state, synced to restaurants/supermarkets table.
 final _shopOpenProvider = StateNotifierProvider<_ShopOpenNotifier, bool?>((ref) {
@@ -319,6 +320,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // On phones that kill background apps, tell the owner how to let the
+    // order alarm through (once; see BackgroundGuide).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) BackgroundGuide.maybeShow(context);
+    });
   }
 
   @override

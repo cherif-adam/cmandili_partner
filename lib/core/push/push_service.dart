@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'notification_navigation.dart';
+import 'alarm_volume.dart';
 
 // ── Channel IDs ──────────────────────────────────────────────────────────────
 // Standard order-status updates (confirmed, preparing, etc.)
@@ -61,6 +62,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final body  = message.data['body']  as String?
       ?? 'Vous avez une commande en attente.';
 
+  await maxAlarmVolume();
   await local.show(
     _kAlarmNotifId,
     title,
@@ -268,6 +270,9 @@ class PushService {
     if (title == null && body == null) return;
 
     final isNewOrder = type == 'new_order';
+    // Fire-and-forget: the volume is raised a few ms before or after the
+    // notification is posted, and the sound loops either way.
+    if (isNewOrder) maxAlarmVolume();
 
     _local.show(
       message.hashCode,

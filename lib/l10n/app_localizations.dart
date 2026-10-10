@@ -982,6 +982,48 @@ abstract class AppLocalizations {
   /// **'Clear Happy Hour'**
   String get clearHappyHour;
 
+  /// No description provided for @bgGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get orders with the app closed'**
+  String get bgGuideTitle;
+
+  /// No description provided for @bgGuideBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone can stop the app in the background. So the alarm still rings when the app is closed:'**
+  String get bgGuideBody;
+
+  /// No description provided for @bgGuideStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on “Autostart” for this app.'**
+  String get bgGuideStep1;
+
+  /// No description provided for @bgGuideStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery saver: choose “No restrictions”.'**
+  String get bgGuideStep2;
+
+  /// No description provided for @bgGuideOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get bgGuideOpen;
+
+  /// No description provided for @bgGuideDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get bgGuideDone;
+
+  /// No description provided for @bgGuideLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get bgGuideLater;
+
   /// No description provided for @hhNormalPrice.
   ///
   /// In en, this message translates to:

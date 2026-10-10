@@ -90,6 +90,19 @@ class CmandiliMessagingService : FirebaseMessagingService() {
         // AudioAttributes.USAGE_ALARM on the channel makes it ring through DND.
         notification.flags = notification.flags or Notification.FLAG_INSISTENT
 
+        // The alarm plays on the ALARM stream, which has its own volume. On a
+        // phone where that slider was left low the alarm was barely audible,
+        // so it is raised to maximum every time an order rings. Never fatal.
+        try {
+            val audio = getSystemService(android.media.AudioManager::class.java)
+            audio.setStreamVolume(
+                android.media.AudioManager.STREAM_ALARM,
+                audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM),
+                0,
+            )
+        } catch (_: Exception) {
+        }
+
         getSystemService(NotificationManager::class.java)
             .notify(ALARM_NOTIF_ID, notification)
     }

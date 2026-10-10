@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../push/alarm_volume.dart';
 
 /// Order watch: rings the new-order alarm even when the app is closed, without
 /// depending on a push ever reaching the phone.
@@ -383,7 +384,9 @@ void orderWatchOnStart(ServiceInstance service) async {
     }
   }
 
-  Future<void> ring(String orderId) => local.show(
+  Future<void> ring(String orderId) async {
+    await maxAlarmVolume();
+    await local.show(
         _kAlarmNotifId,
         '🔔 Nouvelle commande !',
         'Vous avez une commande en attente.',
@@ -409,6 +412,7 @@ void orderWatchOnStart(ServiceInstance service) async {
         ),
         payload: orderId,
       );
+  }
 
   // ── Poll ───────────────────────────────────────────────────────────────────
 
