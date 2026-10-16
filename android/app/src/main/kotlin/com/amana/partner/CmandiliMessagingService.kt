@@ -1,4 +1,4 @@
-package com.cmandili.partner
+package com.amana.partner
 
 import android.app.Notification
 import android.app.NotificationManager

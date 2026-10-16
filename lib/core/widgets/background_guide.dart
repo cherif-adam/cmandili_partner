@@ -23,7 +23,7 @@ class BackgroundGuide {
   BackgroundGuide._();
 
   // Same channel MainActivity.kt already answers on.
-  static const _channel = MethodChannel('com.cmandili.partner/notifications');
+  static const _channel = MethodChannel('com.amana.partner/notifications');
   static const _doneKey = 'bg_guide_done';
   static const _snoozeKey = 'bg_guide_snoozed_until';
 

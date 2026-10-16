@@ -27,7 +27,7 @@ class NotificationNavigation {
   /// Attach to MaterialApp.navigatorKey.
   final navigatorKey = GlobalKey<NavigatorState>();
 
-  static const _channel = MethodChannel('com.cmandili.partner/notifications');
+  static const _channel = MethodChannel('com.amana.partner/notifications');
   final _repo = PartnerOrderRepository();
 
   bool _wired = false;

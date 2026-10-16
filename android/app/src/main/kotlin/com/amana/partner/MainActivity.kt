@@ -1,4 +1,4 @@
-package com.cmandili.partner
+package com.amana.partner
 
 import android.content.Intent
 import android.os.Bundle
@@ -21,7 +21,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     companion object {
-        private const val CHANNEL = "com.cmandili.partner/notifications"
+        private const val CHANNEL = "com.amana.partner/notifications"
     }
 
     private var channel: MethodChannel? = null
