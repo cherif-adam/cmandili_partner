@@ -544,7 +544,7 @@ class _DashboardTab extends ConsumerWidget {
                               const SizedBox(height: 4),
                               profileAsync.when(
                                 data: (profile) => Text(
-                                  profile?.businessName ?? 'Cmandili Partner',
+                                  profile?.businessName ?? 'Amana Partner',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: Colors.white70,
                                       ),
@@ -554,7 +554,7 @@ class _DashboardTab extends ConsumerWidget {
                                   child: LinearProgressIndicator(color: Colors.white54),
                                 ),
                                 error: (_, __) => Text(
-                                  'Cmandili Partner',
+                                  'Amana Partner',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: Colors.white70,
                                       ),

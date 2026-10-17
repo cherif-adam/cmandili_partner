@@ -95,7 +95,7 @@ class MyApp extends ConsumerWidget {
     });
 
     return MaterialApp(
-      title: 'Cmandili Partner',
+      title: 'Amana Partner',
       navigatorKey: NotificationNavigation.instance.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

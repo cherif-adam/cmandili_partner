@@ -1,9 +1,26 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+}
+
+// Upload key for Google Play. android/key.properties and the .jks are
+// git-ignored (android/.gitignore): each machine that publishes keeps its own
+// copy. Without the file, release builds fall back to the debug key so
+// `flutter run --release` still works for everyone else — Play refuses a
+// debug-signed bundle, so that fallback can never reach the store.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasUploadKey = keystorePropertiesFile.exists()
+if (hasUploadKey) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+} else {
+    logger.warn("android/key.properties not found: release build will be signed with the DEBUG key (not uploadable to Google Play).")
 }
 
 android {
@@ -47,11 +64,24 @@ android {
         resourceConfigurations += listOf("en", "ar", "fr")
     }
 
+    signingConfigs {
+        if (hasUploadKey) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasUploadKey) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             // R8 minification is OFF: with Mapbox + Firebase + supabase_flutter
             // it requires hand-tuned -keep rules and crashed the Gradle daemon
             // on a 16 GB machine. The size win was already taken by

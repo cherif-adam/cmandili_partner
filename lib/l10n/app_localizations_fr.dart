@@ -74,7 +74,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les autres appareils ont été déconnectés';
 
   @override
-  String get appTitle => 'Cmandili Partenaire';
+  String get appTitle => 'Amana Partenaire';
 
   @override
   String get signIn => 'Se connecter';

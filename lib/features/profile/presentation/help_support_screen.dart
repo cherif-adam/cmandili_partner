@@ -146,7 +146,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               _ContactOption(
                 icon: Icons.email_outlined,
                 title: l.emailUs,
-                subtitle: 'support@cmandili.com',
+                subtitle: 'firasmzoughi2001@gmail.com',
               ),
               _ContactOption(
                 icon: Icons.phone_outlined,

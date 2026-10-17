@@ -71,7 +71,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pwdOtherDevicesSignedOut => 'تم إنهاء جلسات الأجهزة الأخرى';
 
   @override
-  String get appTitle => 'Cmandili شريك';
+  String get appTitle => 'Amana شريك';
 
   @override
   String get signIn => 'تسجيل الدخول';

@@ -71,7 +71,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pwdOtherDevicesSignedOut => 'Other devices have been signed out';
 
   @override
-  String get appTitle => 'Cmandili Partner';
+  String get appTitle => 'Amana Partner';
 
   @override
   String get signIn => 'Sign In';
