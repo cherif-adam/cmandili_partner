@@ -12,6 +12,7 @@ import 'business_info_screen.dart';
 import 'payout_screen.dart';
 import '../../auth/presentation/change_password_screen.dart';
 import 'help_support_screen.dart';
+import '../../account_deletion/presentation/delete_account_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
 
@@ -231,6 +232,23 @@ class ProfileScreen extends ConsumerWidget {
                   iconColor: AppColors.error,
                   showArrow: false,
                   onTap: () => _logout(context, ref),
+                  screenWidth: screenWidth,
+                  screenHeight: screenHeight,
+                ),
+                // Séparé du reste : c'est la seule action définitive de l'écran.
+                SizedBox(height: screenHeight * 0.03),
+                Divider(color: AppColors.error.withValues(alpha: 0.3)),
+                SizedBox(height: screenHeight * 0.02),
+                _buildProfileItem(
+                  context,
+                  icon: Icons.delete_forever_rounded,
+                  title: AppLocalizations.of(context)!.deleteAccount,
+                  textColor: AppColors.error,
+                  iconColor: AppColors.error,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
+                  ),
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                 ),

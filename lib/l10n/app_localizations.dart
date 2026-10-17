@@ -1755,6 +1755,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose from Gallery'**
   String get chooseFromGallery;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion is permanent. You will no longer be able to sign in with this account.'**
+  String get deleteAccountIntro;
+
+  /// No description provided for @deleteAccountDeletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What will be deleted'**
+  String get deleteAccountDeletedTitle;
+
+  /// No description provided for @deleteAccountDeletedContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Your contact details: name, phone, email, photo and address'**
+  String get deleteAccountDeletedContact;
+
+  /// No description provided for @deleteAccountDeletedBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Your bank details'**
+  String get deleteAccountDeletedBank;
+
+  /// No description provided for @deleteAccountDeletedDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notifications and signed-in devices'**
+  String get deleteAccountDeletedDevices;
+
+  /// No description provided for @deleteAccountShopClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shop will be closed and will no longer receive orders'**
+  String get deleteAccountShopClosed;
+
+  /// No description provided for @deleteAccountKeptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What will be kept'**
+  String get deleteAccountKeptTitle;
+
+  /// No description provided for @deleteAccountKeptOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shop\'s order history and products'**
+  String get deleteAccountKeptOrders;
+
+  /// No description provided for @deleteAccountKeptMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlements and your balance history'**
+  String get deleteAccountKeptMoney;
+
+  /// No description provided for @deleteAccountKeptWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'This information is kept for accounting and in case of a dispute.'**
+  String get deleteAccountKeptWhy;
+
+  /// No description provided for @deleteAccountBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account cannot be deleted yet'**
+  String get deleteAccountBlockedTitle;
+
+  /// No description provided for @deleteAccountContactTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact the Amana team'**
+  String get deleteAccountContactTeam;
+
+  /// No description provided for @deleteAccountBlockerAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'This is an administrator account: it cannot be deleted from the app.'**
+  String get deleteAccountBlockerAdmin;
+
+  /// No description provided for @deleteAccountBlockerActiveOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} order(s) in progress. Wait until they are delivered or cancelled.'**
+  String deleteAccountBlockerActiveOrders(int count);
+
+  /// No description provided for @deleteAccountBlockerOpenDisputes.
+  ///
+  /// In en, this message translates to:
+  /// **'A parcel dispute is still open. Wait for the Amana team to close it.'**
+  String get deleteAccountBlockerOpenDisputes;
+
+  /// No description provided for @deleteAccountBlockerDriverOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} delivery(ies) in progress. Finish them first.'**
+  String deleteAccountBlockerDriverOrders(int count);
+
+  /// No description provided for @deleteAccountBlockerDriverDisputes.
+  ///
+  /// In en, this message translates to:
+  /// **'A parcel dispute involving you is still open. Wait for the Amana team to close it.'**
+  String get deleteAccountBlockerDriverDisputes;
+
+  /// No description provided for @deleteAccountBlockerDriverPayouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Amana still owes you bonuses. Contact the Amana team to settle your account.'**
+  String get deleteAccountBlockerDriverPayouts;
+
+  /// No description provided for @deleteAccountBlockerShopOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shop has {count} order(s) in progress. Complete or cancel them first.'**
+  String deleteAccountBlockerShopOrders(int count);
+
+  /// No description provided for @deleteAccountBlockerWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} TND remain on your balance. Contact the Amana team to settle your account.'**
+  String deleteAccountBlockerWallet(String amount);
+
+  /// No description provided for @deleteAccountBlockerSettlements.
+  ///
+  /// In en, this message translates to:
+  /// **'A settlement is pending. Contact the Amana team to settle your account.'**
+  String get deleteAccountBlockerSettlements;
+
+  /// No description provided for @deleteAccountBlockerUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account cannot be deleted right now. Contact the Amana team.'**
+  String get deleteAccountBlockerUnknown;
+
+  /// No description provided for @deleteAccountConfirmWord.
+  ///
+  /// In en, this message translates to:
+  /// **'DELETE'**
+  String get deleteAccountConfirmWord;
+
+  /// No description provided for @deleteAccountTypeWord.
+  ///
+  /// In en, this message translates to:
+  /// **'To confirm, type {word}'**
+  String deleteAccountTypeWord(String word);
+
+  /// No description provided for @deleteAccountWordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Type exactly {word}'**
+  String deleteAccountWordMismatch(String word);
+
+  /// No description provided for @deleteAccountPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For your security, enter your password'**
+  String get deleteAccountPasswordHint;
+
+  /// No description provided for @deleteAccountPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get deleteAccountPasswordLabel;
+
+  /// No description provided for @deleteAccountGoogleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For your security, you will sign in again with this account\'s Google account.'**
+  String get deleteAccountGoogleHint;
+
+  /// No description provided for @deleteAccountSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete my account'**
+  String get deleteAccountSubmit;
+
+  /// No description provided for @deleteAccountErrorWrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect password.'**
+  String get deleteAccountErrorWrongPassword;
+
+  /// No description provided for @deleteAccountErrorOtherGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'This Google account is not the one linked to this Amana account.'**
+  String get deleteAccountErrorOtherGoogle;
+
+  /// No description provided for @deleteAccountErrorReauth.
+  ///
+  /// In en, this message translates to:
+  /// **'Your confirmation has expired. Please try again.'**
+  String get deleteAccountErrorReauth;
+
+  /// No description provided for @deleteAccountErrorNoMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'This account cannot be confirmed in the app. Contact the Amana team.'**
+  String get deleteAccountErrorNoMethod;
+
+  /// No description provided for @deleteAccountErrorFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion failed. Try again or contact the Amana team.'**
+  String get deleteAccountErrorFailed;
+
+  /// No description provided for @deleteAccountLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not check your account. Check your connection.'**
+  String get deleteAccountLoadError;
+
+  /// No description provided for @deleteAccountRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get deleteAccountRetry;
+
+  /// No description provided for @deleteAccountDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted'**
+  String get deleteAccountDoneTitle;
+
+  /// No description provided for @deleteAccountDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been deleted. Thank you for working with Amana.'**
+  String get deleteAccountDoneBody;
+
+  /// No description provided for @deleteAccountDoneOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get deleteAccountDoneOk;
 }
 
 class _AppLocalizationsDelegate

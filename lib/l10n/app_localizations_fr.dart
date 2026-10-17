@@ -884,4 +884,158 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chooseFromGallery => 'Choisir dans la galerie';
+
+  @override
+  String get deleteAccount => 'Supprimer mon compte';
+
+  @override
+  String get deleteAccountIntro =>
+      'La suppression est définitive. Vous ne pourrez plus vous connecter avec ce compte.';
+
+  @override
+  String get deleteAccountDeletedTitle => 'Ce qui sera supprimé';
+
+  @override
+  String get deleteAccountDeletedContact =>
+      'Vos coordonnées : nom, téléphone, email, photo et adresse';
+
+  @override
+  String get deleteAccountDeletedBank => 'Vos coordonnées bancaires';
+
+  @override
+  String get deleteAccountDeletedDevices =>
+      'Vos notifications et vos appareils connectés';
+
+  @override
+  String get deleteAccountShopClosed =>
+      'Votre boutique sera fermée et ne recevra plus de commandes';
+
+  @override
+  String get deleteAccountKeptTitle => 'Ce qui sera gardé';
+
+  @override
+  String get deleteAccountKeptOrders =>
+      'L\'historique des commandes de votre boutique et vos produits';
+
+  @override
+  String get deleteAccountKeptMoney =>
+      'Les règlements et l\'historique de votre solde';
+
+  @override
+  String get deleteAccountKeptWhy =>
+      'Ces informations sont conservées pour la comptabilité et en cas de litige.';
+
+  @override
+  String get deleteAccountBlockedTitle =>
+      'Votre compte ne peut pas encore être supprimé';
+
+  @override
+  String get deleteAccountContactTeam => 'Contacter l\'équipe Amana';
+
+  @override
+  String get deleteAccountBlockerAdmin =>
+      'C\'est un compte administrateur : il ne peut pas être supprimé depuis l\'app.';
+
+  @override
+  String deleteAccountBlockerActiveOrders(int count) {
+    return 'Vous avez $count commande(s) en cours. Attendez qu\'elles soient livrées ou annulées.';
+  }
+
+  @override
+  String get deleteAccountBlockerOpenDisputes =>
+      'Un litige colis est encore ouvert. Attendez que l\'équipe Amana le clôture.';
+
+  @override
+  String deleteAccountBlockerDriverOrders(int count) {
+    return 'Vous avez $count livraison(s) en cours. Terminez-les d\'abord.';
+  }
+
+  @override
+  String get deleteAccountBlockerDriverDisputes =>
+      'Un litige colis vous concernant est encore ouvert. Attendez que l\'équipe Amana le clôture.';
+
+  @override
+  String get deleteAccountBlockerDriverPayouts =>
+      'Amana vous doit encore des primes. Contactez l\'équipe Amana pour solder votre compte.';
+
+  @override
+  String deleteAccountBlockerShopOrders(int count) {
+    return 'Votre boutique a $count commande(s) en cours. Terminez-les ou annulez-les d\'abord.';
+  }
+
+  @override
+  String deleteAccountBlockerWallet(String amount) {
+    return 'Il reste $amount TND sur votre solde. Contactez l\'équipe Amana pour solder votre compte.';
+  }
+
+  @override
+  String get deleteAccountBlockerSettlements =>
+      'Un règlement est en attente. Contactez l\'équipe Amana pour solder votre compte.';
+
+  @override
+  String get deleteAccountBlockerUnknown =>
+      'Votre compte ne peut pas être supprimé pour le moment. Contactez l\'équipe Amana.';
+
+  @override
+  String get deleteAccountConfirmWord => 'SUPPRIMER';
+
+  @override
+  String deleteAccountTypeWord(String word) {
+    return 'Pour confirmer, tapez $word';
+  }
+
+  @override
+  String deleteAccountWordMismatch(String word) {
+    return 'Tapez exactement $word';
+  }
+
+  @override
+  String get deleteAccountPasswordHint =>
+      'Pour votre sécurité, entrez votre mot de passe';
+
+  @override
+  String get deleteAccountPasswordLabel => 'Mot de passe';
+
+  @override
+  String get deleteAccountGoogleHint =>
+      'Pour votre sécurité, vous allez vous reconnecter avec le compte Google de ce compte.';
+
+  @override
+  String get deleteAccountSubmit => 'Supprimer définitivement mon compte';
+
+  @override
+  String get deleteAccountErrorWrongPassword => 'Mot de passe incorrect.';
+
+  @override
+  String get deleteAccountErrorOtherGoogle =>
+      'Ce compte Google n\'est pas celui de ce compte Amana.';
+
+  @override
+  String get deleteAccountErrorReauth =>
+      'Votre confirmation a expiré. Recommencez.';
+
+  @override
+  String get deleteAccountErrorNoMethod =>
+      'Ce compte ne peut pas être confirmé dans l\'app. Contactez l\'équipe Amana.';
+
+  @override
+  String get deleteAccountErrorFailed =>
+      'La suppression a échoué. Réessayez ou contactez l\'équipe Amana.';
+
+  @override
+  String get deleteAccountLoadError =>
+      'Impossible de vérifier votre compte. Vérifiez votre connexion.';
+
+  @override
+  String get deleteAccountRetry => 'Réessayer';
+
+  @override
+  String get deleteAccountDoneTitle => 'Compte supprimé';
+
+  @override
+  String get deleteAccountDoneBody =>
+      'Votre compte a été supprimé. Merci d\'avoir travaillé avec Amana.';
+
+  @override
+  String get deleteAccountDoneOk => 'OK';
 }
