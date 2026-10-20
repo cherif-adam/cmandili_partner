@@ -5,7 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/push/push_service.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../profile/presentation/profile_screen.dart';
+import '../../profile/presentation/profile/profile_screen.dart';
 import '../../profile/providers/partner_wallet_provider.dart';
 import '../../orders/presentation/partner_orders_screen.dart';
 import '../../menu/presentation/menu_screen.dart';

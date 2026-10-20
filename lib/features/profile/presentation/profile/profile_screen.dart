@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
-import '../../auth/data/models/partner_model.dart';
+import '../../../auth/data/models/partner_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../auth/providers/auth_provider.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
-import '../../../core/providers/localization_provider.dart';
-import '../../../core/providers/theme_provider.dart';
-import 'edit_profile/edit_profile_screen.dart';
-import '../../notifications/presentation/notification_screen.dart';
-import 'business_info/business_info_screen.dart';
-import 'payout/payout_screen.dart';
-import '../../auth/presentation/change_password_screen.dart';
-import 'help_support/help_support_screen.dart';
-import '../../account_deletion/presentation/delete_account_screen.dart';
+import '../../../../core/providers/localization_provider.dart';
+import '../../../../core/providers/theme_provider.dart';
+import '../edit_profile/edit_profile_screen.dart';
+import '../../../notifications/presentation/notification_screen.dart';
+import '../business_info/business_info_screen.dart';
+import '../payout/payout_screen.dart';
+import '../../../auth/presentation/change_password_screen.dart';
+import '../help_support/help_support_screen.dart';
+import '../../../account_deletion/presentation/delete_account_screen.dart';
+import 'profile_controller.dart';
 
+/// "Profil", top to bottom:
+///   _ProfileHeader   avatar, shop name and type (in the app bar)
+///   Account          edit profile, business info, payout
+///   Settings         notifications, language, theme, password, help
+///   log out, then — set apart — delete the account
+///
+/// UI only: signing out, the language and the theme go through
+/// [ProfileController].
 class ProfileScreen extends ConsumerWidget {
 
   /// Se deconnecte pour de vrai, puis laisse main.dart afficher l'ecran de
@@ -26,14 +35,11 @@ class ProfileScreen extends ConsumerWidget {
   /// connexion empile, qui restait au-dessus. L'utilisateur etait connecte et
   /// coince sur le formulaire jusqu'au redemarrage de l'app.
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(profileControllerProvider.notifier);
     // D'abord revenir a la route racine (jeter ce qui a ete empile au-dessus),
     // pour que ce soit bien la racine qui devienne l'ecran de connexion.
     Navigator.of(context).popUntil((route) => route.isFirst);
-    try {
-      await ref.read(authRepositoryProvider).signOut();
-    } catch (e) {
-      debugPrint('Deconnexion echouee : $e');
-    }
+    await controller.signOut();
   }
   const ProfileScreen({super.key});
 
@@ -42,7 +48,9 @@ class ProfileScreen extends ConsumerWidget {
     final size = MediaQuery.of(context).size;
     final screenHeight = size.height;
     final screenWidth = size.width;
-    
+
+    ref.watch(profileControllerProvider);
+    final controller = ref.read(profileControllerProvider.notifier);
     final themeMode = ref.watch(themeProvider);
     final locale = ref.watch(localizationProvider);
     final profileAsync = ref.watch(partnerProfileProvider);
@@ -61,75 +69,7 @@ class ProfileScreen extends ConsumerWidget {
                   gradient: AppColors.primaryGradient,
                 ),
                 child: SafeArea(
-                  child: profileAsync.when(
-                    data: (profile) => Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(screenWidth * 0.01),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.2),
-                          ),
-                          child: CircleAvatar(
-                            radius: screenWidth * 0.125,
-                            backgroundColor: Colors.white,
-                            backgroundImage: profile?.avatarUrl != null && profile!.avatarUrl!.isNotEmpty
-                                ? NetworkImage(profile.avatarUrl!)
-                                : null,
-                            child: profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty
-                                ? Icon(Icons.person_rounded, size: screenWidth * 0.12, color: AppColors.primary)
-                                : null,
-                          ),
-                        ),
-                        SizedBox(height: screenHeight * 0.02),
-                        Text(
-                          profile?.businessName ?? AppLocalizations.of(context)!.partner,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.06,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          // Only the two legacy types have their own
-                          // translated string; every newer category falls back
-                          // to its picker label. Before this, a florist's
-                          // account read "Partenaire supermarche".
-                          switch (profile?.partnerType) {
-                            'restaurant' =>
-                              AppLocalizations.of(context)!.restaurantPartner,
-                            'supermarket' =>
-                              AppLocalizations.of(context)!.supermarketPartner,
-                            final t? => partnerTypeLabel(t),
-                            _ => AppLocalizations.of(context)!.partner,
-                          },
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: screenWidth * 0.035,
-                          ),
-                        ),
-                      ],
-                    ),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                    error: (_, __) => Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.person_rounded, size: screenWidth * 0.2, color: Colors.white),
-                        SizedBox(height: screenHeight * 0.02),
-                        Text(
-                          AppLocalizations.of(context)!.partner,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.06,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: _ProfileHeader(profileAsync: profileAsync),
                 ),
               ),
             ),
@@ -138,71 +78,52 @@ class ProfileScreen extends ConsumerWidget {
             padding: EdgeInsets.all(screenWidth * 0.05),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildSectionHeader(context, 'Account', screenWidth),
-                _buildProfileItem(
-                  context,
+                const _SectionHeader('Account'),
+                _ProfileItem(
                   icon: Icons.person_outline_rounded,
                   title: AppLocalizations.of(context)!.editProfile,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()));
                   },
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.store_rounded,
                   title: AppLocalizations.of(context)!.businessInfo,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessInfoScreen()));
                   },
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.account_balance_outlined,
                   title: AppLocalizations.of(context)!.payoutInfo,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const PayoutScreen()));
                   },
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
                 SizedBox(height: screenHeight * 0.03),
-                _buildSectionHeader(context, AppLocalizations.of(context)!.settings, screenWidth),
-                _buildProfileItem(
-                  context,
+                _SectionHeader(AppLocalizations.of(context)!.settings),
+                _ProfileItem(
                   icon: Icons.notifications_outlined,
                   title: AppLocalizations.of(context)!.notifications,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
                   },
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.language_outlined,
                   title: AppLocalizations.of(context)!.language,
                   trailing: _getLanguageName(locale.languageCode),
                   onTap: () => _showLanguageBottomSheet(context, ref, screenWidth, screenHeight),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.brightness_6_outlined,
                   title: AppLocalizations.of(context)!.theme,
-                  trailing: themeMode == ThemeMode.dark 
-                      ? AppLocalizations.of(context)!.darkMode 
+                  trailing: themeMode == ThemeMode.dark
+                      ? AppLocalizations.of(context)!.darkMode
                       : AppLocalizations.of(context)!.lightMode,
-                  onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
+                  onTap: controller.toggleTheme,
                 ),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.lock_outline_rounded,
                   title: AppLocalizations.of(context)!.changePassword,
                   onTap: () => Navigator.push(
@@ -210,37 +131,28 @@ class ProfileScreen extends ConsumerWidget {
                     MaterialPageRoute(
                         builder: (_) => const ChangePasswordScreen()),
                   ),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.help_outline_rounded,
                   title: AppLocalizations.of(context)!.helpSupport,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
                   },
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
                 SizedBox(height: screenHeight * 0.03),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.logout_rounded,
                   title: AppLocalizations.of(context)!.logout,
                   textColor: AppColors.error,
                   iconColor: AppColors.error,
                   showArrow: false,
                   onTap: () => _logout(context, ref),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
                 // Séparé du reste : c'est la seule action définitive de l'écran.
                 SizedBox(height: screenHeight * 0.03),
                 Divider(color: AppColors.error.withValues(alpha: 0.3)),
                 SizedBox(height: screenHeight * 0.02),
-                _buildProfileItem(
-                  context,
+                _ProfileItem(
                   icon: Icons.delete_forever_rounded,
                   title: AppLocalizations.of(context)!.deleteAccount,
                   textColor: AppColors.error,
@@ -249,8 +161,6 @@ class ProfileScreen extends ConsumerWidget {
                     context,
                     MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
                   ),
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
                 ),
                 SizedBox(height: screenHeight * 0.12),
               ]),
@@ -270,6 +180,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _showLanguageBottomSheet(BuildContext context, WidgetRef ref, double screenWidth, double screenHeight) {
+    final controller = ref.read(profileControllerProvider.notifier);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -293,32 +204,147 @@ class ProfileScreen extends ConsumerWidget {
                   ),
             ),
             SizedBox(height: screenHeight * 0.03),
-            _buildLanguageOption(context, ref, 'English', 'en', screenWidth),
-            _buildLanguageOption(context, ref, 'العربية', 'ar', screenWidth),
-            _buildLanguageOption(context, ref, 'Français', 'fr', screenWidth),
+            for (final (name, code) in const [
+              ('English', 'en'),
+              ('العربية', 'ar'),
+              ('Français', 'fr'),
+            ])
+              _LanguageOption(
+                name: name,
+                // Read with the screen's ref at each rebuild of the sheet, as
+                // before: the tick follows the new language as it closes.
+                isSelected: ref.watch(localizationProvider).languageCode == code,
+                onTap: () {
+                  controller.setLanguage(code);
+                  Navigator.pop(context);
+                },
+              ),
             SizedBox(height: screenHeight * 0.03),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildLanguageOption(BuildContext context, WidgetRef ref, String name, String code, double screenWidth) {
-    final isSelected = ref.watch(localizationProvider).languageCode == code;
+// ── Sections ──────────────────────────────────────────────────────────────────
+
+/// Avatar, shop name and shop type, in the expanded app bar.
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.profileAsync});
+
+  final AsyncValue<PartnerProfile?> profileAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final screenHeight = size.height;
+    final screenWidth = size.width;
+    return profileAsync.when(
+      data: (profile) => Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(screenWidth * 0.01),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.2),
+            ),
+            child: CircleAvatar(
+              radius: screenWidth * 0.125,
+              backgroundColor: Colors.white,
+              backgroundImage: profile?.avatarUrl != null && profile!.avatarUrl!.isNotEmpty
+                  ? NetworkImage(profile.avatarUrl!)
+                  : null,
+              child: profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty
+                  ? Icon(Icons.person_rounded, size: screenWidth * 0.12, color: AppColors.primary)
+                  : null,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.02),
+          Text(
+            profile?.businessName ?? AppLocalizations.of(context)!.partner,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.06,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            // Only the two legacy types have their own
+            // translated string; every newer category falls back
+            // to its picker label. Before this, a florist's
+            // account read "Partenaire supermarche".
+            switch (profile?.partnerType) {
+              'restaurant' =>
+                AppLocalizations.of(context)!.restaurantPartner,
+              'supermarket' =>
+                AppLocalizations.of(context)!.supermarketPartner,
+              final t? => partnerTypeLabel(t),
+              _ => AppLocalizations.of(context)!.partner,
+            },
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: screenWidth * 0.035,
+            ),
+          ),
+        ],
+      ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
+      error: (_, __) => Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.person_rounded, size: screenWidth * 0.2, color: Colors.white),
+          SizedBox(height: screenHeight * 0.02),
+          Text(
+            AppLocalizations.of(context)!.partner,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.06,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageOption extends StatelessWidget {
+  const _LanguageOption({
+    required this.name,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String name;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return ListTile(
       title: Text(
         name,
         style: TextStyle(fontSize: screenWidth * 0.04),
       ),
       trailing: isSelected ? Icon(Icons.check, color: AppColors.primary, size: screenWidth * 0.06) : null,
-      onTap: () {
-        ref.read(localizationProvider.notifier).setLocale(Locale(code));
-        Navigator.pop(context);
-      },
+      onTap: onTap,
     );
   }
+}
 
-  Widget _buildSectionHeader(BuildContext context, String title, double screenWidth) {
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return Padding(
       padding: EdgeInsets.only(
         bottom: screenWidth * 0.04,
@@ -334,19 +360,32 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildProfileItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    required double screenWidth,
-    required double screenHeight,
-    String? trailing,
-    Color? textColor,
-    Color? iconColor,
-    bool showArrow = true,
-  }) {
+class _ProfileItem extends StatelessWidget {
+  const _ProfileItem({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.trailing,
+    this.textColor,
+    this.iconColor,
+    this.showArrow = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final String? trailing;
+  final Color? textColor;
+  final Color? iconColor;
+  final bool showArrow;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+    final screenHeight = size.height;
     return Container(
       margin: EdgeInsets.only(bottom: screenHeight * 0.02),
       decoration: BoxDecoration(
@@ -394,7 +433,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 if (trailing != null)
                   Text(
-                    trailing,
+                    trailing!,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
                       fontSize: screenWidth * 0.035,
