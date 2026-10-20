@@ -9,7 +9,7 @@ import '../../profile/presentation/profile_screen.dart';
 import '../../profile/presentation/payout_screen.dart';
 import '../../orders/presentation/partner_orders_screen.dart';
 import '../../menu/presentation/menu_screen.dart';
-import '../../reports/presentation/reports_screen.dart';
+import '../../reports/presentation/reports/reports_screen.dart';
 import '../../orders/providers/partner_orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/presentation/not_a_partner_screen.dart';
