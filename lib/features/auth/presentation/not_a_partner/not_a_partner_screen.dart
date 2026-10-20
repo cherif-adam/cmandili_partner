@@ -4,7 +4,7 @@ import 'package:cmandili_partner/l10n/app_localizations.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
-import '../partner_onboarding_screen.dart';
+import '../partner_onboarding/partner_onboarding_screen.dart';
 import 'not_a_partner_controller.dart';
 
 /// Ce compte est connecté, mais ce n'est pas un compte partenaire.
