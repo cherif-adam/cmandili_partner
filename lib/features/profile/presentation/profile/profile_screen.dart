@@ -7,7 +7,7 @@ import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../../core/providers/localization_provider.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../edit_profile/edit_profile_screen.dart';
-import '../../../notifications/presentation/notification_screen.dart';
+import '../../../notifications/presentation/notification/notification_screen.dart';
 import '../business_info/business_info_screen.dart';
 import '../payout/payout_screen.dart';
 import '../../../auth/presentation/change_password_screen.dart';
