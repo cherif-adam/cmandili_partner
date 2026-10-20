@@ -11,7 +11,7 @@ import '../../notifications/presentation/notification_screen.dart';
 import 'business_info_screen.dart';
 import 'payout_screen.dart';
 import '../../auth/presentation/change_password_screen.dart';
-import 'help_support_screen.dart';
+import 'help_support/help_support_screen.dart';
 import '../../account_deletion/presentation/delete_account_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
