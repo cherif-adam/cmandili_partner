@@ -12,7 +12,7 @@ import '../../menu/presentation/menu_screen.dart';
 import '../../reports/presentation/reports/reports_screen.dart';
 import '../../orders/providers/partner_orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/presentation/not_a_partner_screen.dart';
+import '../../auth/presentation/not_a_partner/not_a_partner_screen.dart';
 import '../../orders/providers/audio_alert_provider.dart';
 import '../../orders/data/models/order.dart';
 import '../../orders/presentation/incoming_order_dialog.dart';
