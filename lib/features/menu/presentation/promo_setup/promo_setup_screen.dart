@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/shop_settings_provider.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/promo_price.dart';
-import '../providers/menu_provider.dart';
+import '../../../../core/providers/shop_settings_provider.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/promo_price.dart';
+import 'promo_setup_controller.dart';
 
 /// Promotion en pourcentage, pour les commerces qui n'utilisent pas le Happy
 /// Hour : supermarche, fleuriste, animalerie, cadeaux, electronique.
@@ -22,6 +22,10 @@ import '../providers/menu_provider.dart';
 ///
 /// Sur une CATEGORIE d'articles ([categoryName] renseigne), le pourcentage est
 /// le meme pour tous mais chaque article garde un prix calcule depuis le sien.
+///
+/// Top to bottom: _PreviewHeader, the percentage (field + quick chips), the
+/// start and end (_DateTile), then the save / stop buttons. UI only: the
+/// dates, the rules, saving and stopping live in [PromoSetupController].
 class PromoSetupScreen extends ConsumerStatefulWidget {
   /// Article vise, ou null quand la promotion porte sur toute une categorie.
   final String? itemId;
@@ -59,24 +63,22 @@ class PromoSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
+  /// This screen's own controller (see [promoSetupControllerProvider]),
+  /// starting from the promotion's current dates.
+  late final _provider = promoSetupControllerProvider((
+    key: Object(),
+    start: widget.currentStartTime,
+    end: widget.currentEndTime,
+  ));
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _percentController;
 
-  DateTime? _startTime;
-  DateTime? _endTime;
-  bool _isLoading = false;
-
-  /// Il y a une promotion a arreter des qu'un taux ou un prix est pose et que
-  /// la fin n'est pas passee.
-  ///
-  /// Le taux compte autant que le prix : une promotion PROGRAMMEE n'a pas
-  /// encore de prix -- il n'est materialise qu'a l'instant du debut -- et le
-  /// commercant doit pouvoir l'annuler avant qu'elle ne parte. C'est meme le
-  /// seul moment ou l'annuler ne coute rien.
-  bool get _hasPromo =>
-      (widget.currentDiscountPrice != null || widget.currentPercent != null) &&
-      (widget.currentEndTime == null ||
-          widget.currentEndTime!.isAfter(DateTime.now()));
+  bool get _hasPromo => PromoSetupController.hasPromo(
+        currentDiscountPrice: widget.currentDiscountPrice,
+        currentPercent: widget.currentPercent,
+        currentEndTime: widget.currentEndTime,
+      );
 
   @override
   void initState() {
@@ -86,8 +88,6 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
     _percentController = TextEditingController(
       text: pct == null ? '' : _trimZeros(pct),
     );
-    _startTime = widget.currentStartTime;
-    _endTime = widget.currentEndTime;
     _percentController.addListener(() => setState(() {}));
   }
 
@@ -100,15 +100,14 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
   static String _trimZeros(double v) =>
       v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
-  double? get _percent => double.tryParse(_percentController.text.replaceAll(',', '.'));
-
-  /// Debut effectif : ce que le commercant a choisi, ou maintenant.
-  DateTime get _effectiveStart => _startTime ?? DateTime.now();
+  double? get _percent => PromoSetupController.parsePercent(_percentController.text);
 
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(shopSettingsProvider);
     final maxPercent = settingsAsync.valueOrNull?.maxDiscountPercent ?? 70;
+    final state = ref.watch(_provider);
+    final controller = ref.read(_provider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -123,10 +122,17 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _header(maxPercent),
+            _PreviewHeader(
+              itemName: widget.itemName,
+              originalPrice: widget.originalPrice,
+              categoryName: widget.categoryName,
+              categoryItemCount: widget.categoryItemCount,
+              percent: _percent,
+              maxPercent: maxPercent,
+            ),
             const SizedBox(height: 20),
 
-            _sectionTitle('Pourcentage de remise'),
+            const _SectionTitle('Pourcentage de remise'),
             TextFormField(
               controller: _percentController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -142,99 +148,74 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              validator: (v) => _validatePercent(v, maxPercent),
+              validator: (v) => _percentErrorText(v, maxPercent),
             ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               children: [10, 20, 30, 50]
                   .where((p) => p <= maxPercent)
-                  .map(_quickChip)
+                  .map((p) => _QuickChip(
+                        percent: p,
+                        selected: _percent == p.toDouble(),
+                        onSelected: () {
+                          _percentController.text = '$p';
+                          _percentController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: _percentController.text.length),
+                          );
+                        },
+                      ))
                   .toList(),
             ),
 
             const SizedBox(height: 20),
-            _sectionTitle('Début'),
-            _dateTile(
-              label: _startTime == null
+            const _SectionTitle('Début'),
+            _DateTile(
+              label: state.startTime == null
                   ? 'Maintenant, dès l\'enregistrement'
-                  : _formatDateTime(_startTime!),
+                  : _formatDateTime(state.startTime!),
               icon: Icons.play_circle_outline_rounded,
               onTap: () async {
                 final picked = await _pickDateTime(
-                  initial: _startTime ?? DateTime.now(),
+                  initial: ref.read(_provider).startTime ?? DateTime.now(),
                   firstDate: DateTime.now(),
                 );
-                if (picked != null) setState(() => _startTime = picked);
+                if (picked != null) controller.setStart(picked);
               },
-              onClear: _startTime == null ? null : () => setState(() => _startTime = null),
+              onClear: state.startTime == null ? null : () => controller.setStart(null),
             ),
 
             const SizedBox(height: 16),
-            _sectionTitle('Fin'),
-            _dateTile(
-              label: _endTime == null
+            const _SectionTitle('Fin'),
+            _DateTile(
+              label: state.endTime == null
                   ? 'Choisir la date de fin'
-                  : _formatDateTime(_endTime!),
+                  : _formatDateTime(state.endTime!),
               icon: Icons.stop_circle_outlined,
               onTap: () async {
+                final current = ref.read(_provider);
                 final picked = await _pickDateTime(
-                  initial: _endTime ?? _effectiveStart.add(const Duration(days: 7)),
-                  firstDate: _effectiveStart,
+                  initial: current.endTime ?? current.effectiveStart.add(const Duration(days: 7)),
+                  firstDate: current.effectiveStart,
                 );
-                if (picked != null) setState(() => _endTime = picked);
+                if (picked != null) controller.setEnd(picked);
               },
-              onClear: _endTime == null ? null : () => setState(() => _endTime = null),
+              onClear: state.endTime == null ? null : () => controller.setEnd(null),
             ),
 
             const SizedBox(height: 24),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : () => _save(maxPercent),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        _hasPromo
-                            ? 'Mettre à jour la promotion'
-                            : 'Activer la promotion',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-              ),
+            _SaveButton(
+              isLoading: state.isLoading,
+              hasPromo: _hasPromo,
+              onPressed: () => _save(maxPercent),
             ),
 
             if (_hasPromo || widget.isCategory) ...[
               const SizedBox(height: 10),
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _stop,
-                  icon: const Icon(Icons.close_rounded),
-                  label: Text(widget.isCategory
-                      ? 'Arrêter la promotion de la rubrique'
-                      : 'Arrêter la promotion'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
+              _StopButton(
+                isLoading: state.isLoading,
+                isCategory: widget.isCategory,
+                onPressed: _stop,
               ),
             ],
           ],
@@ -245,108 +226,86 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
 
   // ── Validation ───────────────────────────────────────────────────────────
 
-  String? _validatePercent(String? raw, double maxPercent) {
-    final v = double.tryParse((raw ?? '').replaceAll(',', '.'));
-    if (v == null) return 'Entrez un pourcentage.';
-    if (v < 1) return 'Le pourcentage doit être d\'au moins 1 %.';
-    if (v > maxPercent) {
-      return 'Le maximum autorisé est ${_trimZeros(maxPercent)} %.';
+  String? _percentErrorText(String? raw, double maxPercent) {
+    switch (PromoSetupController.validatePercent(raw, maxPercent)) {
+      case PromoPercentError.missing:
+        return 'Entrez un pourcentage.';
+      case PromoPercentError.belowOne:
+        return 'Le pourcentage doit être d\'au moins 1 %.';
+      case PromoPercentError.aboveMax:
+        return 'Le maximum autorisé est ${_trimZeros(maxPercent)} %.';
+      case null:
+        return null;
     }
-    return null;
   }
 
-  /// Les controles que le formulaire ne peut pas faire seul, parce qu'ils
-  /// portent sur la coherence entre deux champs. Chacun a son propre message :
-  /// "date invalide" n'apprend rien au commercant.
-  String? _validateDates() {
-    final now = DateTime.now();
-    if (_endTime == null) {
-      return 'Choisissez une date de fin.';
+  static String _dateErrorText(PromoDateError error) {
+    switch (error) {
+      case PromoDateError.missingEnd:
+        return 'Choisissez une date de fin.';
+      case PromoDateError.startInPast:
+        return 'La date de début ne peut pas être dans le passé.';
+      case PromoDateError.endBeforeStart:
+        return 'La date de fin doit être après la date de début.';
+      case PromoDateError.endPassed:
+        return 'La date de fin est déjà passée.';
     }
-    // Une minute de tolerance : le temps de remplir le formulaire, un debut
-    // choisi "maintenant" serait sinon deja dans le passe au moment du clic.
-    if (_startTime != null &&
-        _startTime!.isBefore(now.subtract(const Duration(minutes: 1)))) {
-      return 'La date de début ne peut pas être dans le passé.';
-    }
-    if (!_endTime!.isAfter(_effectiveStart)) {
-      return 'La date de fin doit être après la date de début.';
-    }
-    if (!_endTime!.isAfter(now)) {
-      return 'La date de fin est déjà passée.';
-    }
-    return null;
   }
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
   Future<void> _save(double maxPercent) async {
     if (!_formKey.currentState!.validate()) return;
-    final dateError = _validateDates();
+    final controller = ref.read(_provider.notifier);
+    final dateError = controller.validateDates();
     if (dateError != null) {
-      _snack(dateError, AppColors.error);
+      _snack(_dateErrorText(dateError), AppColors.error);
       return;
     }
     final percent = _percent!;
 
-    setState(() => _isLoading = true);
-    final repo = ref.read(menuRepositoryProvider);
+    final count = await controller.save(
+      percent: percent,
+      itemId: widget.itemId,
+      originalPrice: widget.originalPrice,
+      categoryName: widget.categoryName,
+      vendorId: widget.vendorId,
+    );
+    if (!mounted) return;
 
     if (widget.isCategory) {
-      final count = await repo.setPercentPromoForCategory(
-        vendorId: widget.vendorId!,
-        category: widget.categoryName!,
-        percent: percent,
-        startTime: _startTime,
-        endTime: _endTime,
-      );
-      if (!mounted) return;
-      setState(() => _isLoading = false);
       if (count == 0) {
         _snack('Aucun article mis à jour. Réessayez.', AppColors.error);
         return;
       }
-      ref.invalidate(menuItemsProvider);
+      controller.refreshMenu();
       Navigator.pop(context);
       _snack('$count article(s) en promotion −${_trimZeros(percent)} %.',
           AppColors.success);
       return;
     }
 
-    final ok = await repo.setPercentPromo(
-      itemId: widget.itemId!,
-      originalPrice: widget.originalPrice,
-      percent: percent,
-      startTime: _startTime,
-      endTime: _endTime,
-    );
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    if (!ok) {
+    if (count == 0) {
       _snack('Enregistrement refusé. Vérifiez vos droits et réessayez.',
           AppColors.error);
       return;
     }
-    ref.invalidate(menuItemsProvider);
+    controller.refreshMenu();
     Navigator.pop(context);
     _snack('Promotion activée : −${_trimZeros(percent)} %.', AppColors.success);
   }
 
   Future<void> _stop() async {
-    setState(() => _isLoading = true);
-    final repo = ref.read(menuRepositoryProvider);
+    final controller = ref.read(_provider.notifier);
+    final count = await controller.stop(
+      itemId: widget.itemId,
+      categoryName: widget.categoryName,
+      vendorId: widget.vendorId,
+    );
+    if (!mounted) return;
 
-    // Ce qui a été posé en une action doit pouvoir être retiré en une action :
-    // un commerçant qui a bradé quarante références ne va pas les rouvrir une
-    // par une.
     if (widget.isCategory) {
-      final count = await repo.clearPromoForCategory(
-        vendorId: widget.vendorId!,
-        category: widget.categoryName!,
-      );
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ref.invalidate(menuItemsProvider);
+      controller.refreshMenu();
       Navigator.pop(context);
       _snack(
         count == 0
@@ -357,14 +316,11 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
       return;
     }
 
-    final ok = await repo.clearPromo(widget.itemId!);
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    if (!ok) {
+    if (count == 0) {
       _snack('Impossible d\'arrêter la promotion.', AppColors.error);
       return;
     }
-    ref.invalidate(menuItemsProvider);
+    controller.refreshMenu();
     Navigator.pop(context);
     _snack('Promotion arrêtée.', AppColors.success);
   }
@@ -375,143 +331,6 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
         content: Text(message, style: const TextStyle(color: Colors.white)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  // ── Presentation ─────────────────────────────────────────────────────────
-
-  /// L'apercu : ancien prix barre, nouveau prix, economie. C'est ce que le
-  /// commercant regarde avant de valider, donc il vient du meme calcul que
-  /// l'ecriture.
-  Widget _header(double maxPercent) {
-    final pct = _percent;
-    final valid = pct != null && pct >= 1 && pct <= maxPercent;
-    final newPrice = valid ? computePromoPrice(widget.originalPrice, pct) : null;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.textLight.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.isCategory
-                ? '${widget.categoryName} · ${widget.categoryItemCount} article(s)'
-                : widget.itemName,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-          ),
-          const SizedBox(height: 10),
-          if (widget.isCategory)
-            const Text(
-              'Chaque article garde un prix calculé sur le sien : le pourcentage est commun, pas le prix.',
-              style: TextStyle(fontSize: 12, color: AppColors.textLight),
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${widget.originalPrice.toStringAsFixed(3)} DT',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textLight,
-                    decoration:
-                        newPrice != null ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                if (newPrice != null) ...[
-                  const SizedBox(width: 10),
-                  Text(
-                    '${newPrice.toStringAsFixed(3)} DT',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          if (newPrice != null && !widget.isCategory) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Le client économise ${(widget.originalPrice - newPrice).toStringAsFixed(3)} DT.',
-              style: const TextStyle(fontSize: 12, color: AppColors.textLight),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w600),
-        ),
-      );
-
-  Widget _quickChip(int percent) {
-    final selected = _percent == percent.toDouble();
-    return ChoiceChip(
-      label: Text('−$percent %'),
-      selected: selected,
-      onSelected: (_) {
-        _percentController.text = '$percent';
-        _percentController.selection = TextSelection.fromPosition(
-          TextPosition(offset: _percentController.text.length),
-        );
-      },
-      selectedColor: AppColors.primary.withOpacity(0.18),
-      labelStyle: TextStyle(
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        color: selected ? AppColors.primary : AppColors.textPrimary,
-      ),
-    );
-  }
-
-  Widget _dateTile({
-    required String label,
-    required IconData icon,
-    required VoidCallback onTap,
-    VoidCallback? onClear,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.textLight.withOpacity(0.2)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: AppColors.primary),
-            const SizedBox(width: 12),
-            Expanded(child: Text(label)),
-            if (onClear != null)
-              IconButton(
-                icon: const Icon(Icons.close_rounded, size: 18),
-                onPressed: onClear,
-                tooltip: 'Effacer',
-              )
-            else
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.textLight),
-          ],
-        ),
       ),
     );
   }
@@ -548,5 +367,264 @@ class _PromoSetupScreenState extends ConsumerState<PromoSetupScreen> {
   String _formatDateTime(DateTime d) {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(d.day)}/${two(d.month)}/${d.year} à ${two(d.hour)}:${two(d.minute)}';
+  }
+}
+
+// ── Sections ──────────────────────────────────────────────────────────────────
+
+/// L'apercu : ancien prix barre, nouveau prix, economie. C'est ce que le
+/// commercant regarde avant de valider, donc il vient du meme calcul que
+/// l'ecriture.
+class _PreviewHeader extends StatelessWidget {
+  const _PreviewHeader({
+    required this.itemName,
+    required this.originalPrice,
+    required this.categoryName,
+    required this.categoryItemCount,
+    required this.percent,
+    required this.maxPercent,
+  });
+
+  final String itemName;
+  final double originalPrice;
+  final String? categoryName;
+  final int categoryItemCount;
+  final double? percent;
+  final double maxPercent;
+
+  bool get isCategory => categoryName != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = percent;
+    final valid = pct != null && pct >= 1 && pct <= maxPercent;
+    final newPrice = valid ? computePromoPrice(originalPrice, pct) : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.textLight.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isCategory
+                ? '$categoryName · $categoryItemCount article(s)'
+                : itemName,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+          const SizedBox(height: 10),
+          if (isCategory)
+            const Text(
+              'Chaque article garde un prix calculé sur le sien : le pourcentage est commun, pas le prix.',
+              style: TextStyle(fontSize: 12, color: AppColors.textLight),
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${originalPrice.toStringAsFixed(3)} DT',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textLight,
+                    decoration:
+                        newPrice != null ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                if (newPrice != null) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    '${newPrice.toStringAsFixed(3)} DT',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          if (newPrice != null && !isCategory) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Le client économise ${(originalPrice - newPrice).toStringAsFixed(3)} DT.',
+              style: const TextStyle(fontSize: 12, color: AppColors.textLight),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          text,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      );
+}
+
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({
+    required this.percent,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final int percent;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text('−$percent %'),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      selectedColor: AppColors.primary.withOpacity(0.18),
+      labelStyle: TextStyle(
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        color: selected ? AppColors.primary : AppColors.textPrimary,
+      ),
+    );
+  }
+}
+
+class _DateTile extends StatelessWidget {
+  const _DateTile({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.onClear,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.textLight.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(child: Text(label)),
+            if (onClear != null)
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                onPressed: onClear,
+                tooltip: 'Effacer',
+              )
+            else
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.textLight),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({
+    required this.isLoading,
+    required this.hasPromo,
+    required this.onPressed,
+  });
+
+  final bool isLoading;
+  final bool hasPromo;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                hasPromo
+                    ? 'Mettre à jour la promotion'
+                    : 'Activer la promotion',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+      ),
+    );
+  }
+}
+
+class _StopButton extends StatelessWidget {
+  const _StopButton({
+    required this.isLoading,
+    required this.isCategory,
+    required this.onPressed,
+  });
+
+  final bool isLoading;
+  final bool isCategory;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: const Icon(Icons.close_rounded),
+        label: Text(isCategory
+            ? 'Arrêter la promotion de la rubrique'
+            : 'Arrêter la promotion'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.error,
+          side: const BorderSide(color: AppColors.error),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
   }
 }
