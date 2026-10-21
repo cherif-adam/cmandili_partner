@@ -5,7 +5,7 @@ import '../../../../core/providers/shop_settings_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../providers/menu_provider.dart';
 import '../../../auth/providers/auth_provider.dart';
-import '../add_edit_item_screen.dart';
+import '../add_edit_item/add_edit_item_screen.dart';
 import '../promo_setup/promo_setup_screen.dart';
 import '../../providers/menu_scanner_provider.dart';
 import 'package:image_picker/image_picker.dart';
