@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
-import '../../../core/theme/app_colors.dart';
-import '../providers/menu_provider.dart';
-
-/// How the partner chose the end of the deal. Kept separately from the
-/// resulting DateTime so the matching chip stays highlighted.
-enum _EndChoice { none, plus1h, plus2h, plus3h, tonight, custom }
+import '../../../../core/theme/app_colors.dart';
+import 'happy_hour_setup_controller.dart';
 
 /// Sets up a happy hour on one item: the reduced price, when it ends (or
 /// never), and how many units are sold at that price (or unlimited).
@@ -19,6 +15,11 @@ enum _EndChoice { none, plus1h, plus2h, plus3h, tonight, custom }
 ///
 /// Works for every shop category: the write goes to vendor_items directly
 /// (see MenuRepository.setHappyHour).
+///
+/// Top to bottom: _DealHeader, new price (field + quick discounts), start,
+/// end (chips + _InfoTile), quantity, the activate / clear buttons, the live
+/// note. UI only: the choices, the rules, activating and clearing live in
+/// [HappyHourSetupController].
 class HappyHourSetupScreen extends ConsumerStatefulWidget {
   final String itemId;
   final String itemName;
@@ -43,21 +44,22 @@ class HappyHourSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
+  /// This screen's own controller (see [happyHourSetupControllerProvider]),
+  /// starting from the deal's current end and quantity.
+  late final _provider = happyHourSetupControllerProvider((
+    key: Object(),
+    currentEndTime: widget.currentEndTime,
+    currentQuantity: widget.currentQuantity,
+  ));
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _priceController;
   late final TextEditingController _quantityController;
 
-  _EndChoice _endChoice = _EndChoice.none;
-  DateTime? _endTime;
-  bool _limited = false;
-  bool _isLoading = false;
-
-  /// A deal counts as running when it has a price and has not passed its
-  /// end. A deal with no end date is running until it is cleared.
-  bool get _isActive =>
-      widget.currentDiscountPrice != null &&
-      (widget.currentEndTime == null ||
-          widget.currentEndTime!.isAfter(DateTime.now()));
+  bool get _isActive => HappyHourSetupController.isActive(
+        currentDiscountPrice: widget.currentDiscountPrice,
+        currentEndTime: widget.currentEndTime,
+      );
 
   @override
   void initState() {
@@ -68,12 +70,6 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
     _quantityController = TextEditingController(
       text: widget.currentQuantity?.toString() ?? '',
     );
-    _limited = widget.currentQuantity != null;
-    final end = widget.currentEndTime;
-    if (end != null && end.isAfter(DateTime.now())) {
-      _endTime = end;
-      _endChoice = _EndChoice.custom;
-    }
   }
 
   @override
@@ -83,47 +79,29 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
     super.dispose();
   }
 
-  double? get _price =>
-      double.tryParse(_priceController.text.replaceAll(',', '.'));
+  double? get _price => HappyHourSetupController.parsePrice(_priceController.text);
 
-  int get _percentOff {
-    final p = _price;
-    if (p == null || p <= 0 || p >= widget.originalPrice) return 0;
-    return ((widget.originalPrice - p) / widget.originalPrice * 100).round();
-  }
+  int get _percentOff =>
+      HappyHourSetupController.percentOff(_price, widget.originalPrice);
 
   void _applyPercent(int percent) {
-    final p = widget.originalPrice * (100 - percent) / 100;
+    final p = HappyHourSetupController.priceForPercent(widget.originalPrice, percent);
     setState(() => _priceController.text = p.toStringAsFixed(2));
   }
 
-  Future<void> _chooseEnd(_EndChoice choice) async {
-    final now = DateTime.now();
-    DateTime? end;
-    switch (choice) {
-      case _EndChoice.none:
-        end = null;
-      case _EndChoice.plus1h:
-        end = now.add(const Duration(hours: 1));
-      case _EndChoice.plus2h:
-        end = now.add(const Duration(hours: 2));
-      case _EndChoice.plus3h:
-        end = now.add(const Duration(hours: 3));
-      case _EndChoice.tonight:
-        end = DateTime(now.year, now.month, now.day, 23, 59);
-      case _EndChoice.custom:
-        end = await _pickDateTime();
-        if (end == null) return; // cancelled: keep the previous choice
+  Future<void> _chooseEnd(HappyHourEnd choice) async {
+    final controller = ref.read(_provider.notifier);
+    DateTime? custom;
+    if (choice == HappyHourEnd.custom) {
+      custom = await _pickDateTime();
+      if (custom == null) return; // cancelled: keep the previous choice
     }
     if (!mounted) return;
-    setState(() {
-      _endChoice = choice;
-      _endTime = end;
-    });
+    controller.chooseEnd(choice, customEnd: custom);
   }
 
   Future<DateTime?> _pickDateTime() async {
-    final initial = _endTime ?? DateTime.now().add(const Duration(hours: 2));
+    final initial = ref.read(_provider).endTime ?? DateTime.now().add(const Duration(hours: 2));
     final date = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -151,22 +129,20 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
   Future<void> _activate() async {
     final l = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
-    if (_endTime != null && !_endTime!.isAfter(DateTime.now())) {
+    final controller = ref.read(_provider.notifier);
+    if (controller.endIsInPast) {
       _snack(l.hhEndInPast, AppColors.error);
       return;
     }
 
-    setState(() => _isLoading = true);
-    final ok = await ref.read(menuRepositoryProvider).setHappyHour(
-          itemId: widget.itemId,
-          discountPrice: _price!,
-          endTime: _endTime,
-          quantity: _limited ? int.parse(_quantityController.text) : null,
-        );
+    final ok = await controller.activate(
+      itemId: widget.itemId,
+      price: _price!,
+      quantityText: _quantityController.text,
+    );
     if (!mounted) return;
-    setState(() => _isLoading = false);
     if (ok) {
-      ref.invalidate(menuItemsProvider);
+      controller.refreshMenu();
       Navigator.pop(context);
       _snack(l.happyHourActivated, AppColors.success);
     } else {
@@ -176,13 +152,11 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
 
   Future<void> _clear() async {
     final l = AppLocalizations.of(context)!;
-    setState(() => _isLoading = true);
-    final ok =
-        await ref.read(menuRepositoryProvider).clearHappyHour(widget.itemId);
+    final controller = ref.read(_provider.notifier);
+    final ok = await controller.clear(widget.itemId);
     if (!mounted) return;
-    setState(() => _isLoading = false);
     if (ok) {
-      ref.invalidate(menuItemsProvider);
+      controller.refreshMenu();
       Navigator.pop(context);
       _snack(l.happyHourCleared, null);
     } else {
@@ -200,9 +174,17 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
     );
   }
 
+  void _step(int delta) {
+    final current = int.tryParse(_quantityController.text) ?? 0;
+    final next = (current + delta).clamp(1, 9999);
+    setState(() => _quantityController.text = '$next');
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final state = ref.watch(_provider);
+    final controller = ref.read(_provider.notifier);
     final percent = _percentOff;
     final original = widget.originalPrice.toStringAsFixed(2);
 
@@ -220,11 +202,18 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _header(l, percent, original),
+              _DealHeader(
+                itemName: widget.itemName,
+                price: _price,
+                percent: percent,
+                original: original,
+                limited: state.limited,
+                quantityText: _quantityController.text,
+              ),
               const SizedBox(height: 24),
 
               // ── New price ───────────────────────────────────────────────
-              _sectionTitle(l.hhNewPrice),
+              _SectionTitle(l.hhNewPrice),
               TextFormField(
                 controller: _priceController,
                 keyboardType:
@@ -239,13 +228,17 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
                   suffix: 'DT',
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return l.hhPriceRequired;
-                  final d = _price;
-                  if (d == null || d <= 0) return l.hhPriceInvalid;
-                  if (d >= widget.originalPrice) {
-                    return l.hhPriceTooHigh(original);
+                  switch (HappyHourSetupController.validatePrice(v, widget.originalPrice)) {
+                    case HappyHourFieldError.priceRequired:
+                      return l.hhPriceRequired;
+                    case HappyHourFieldError.priceInvalid:
+                      return l.hhPriceInvalid;
+                    case HappyHourFieldError.priceTooHigh:
+                      return l.hhPriceTooHigh(original);
+                    case HappyHourFieldError.quantityInvalid:
+                    case null:
+                      return null;
                   }
-                  return null;
                 },
               ),
               const SizedBox(height: 10),
@@ -276,8 +269,8 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
               const SizedBox(height: 24),
 
               // ── Start ──────────────────────────────────────────────────
-              _sectionTitle(l.hhStart),
-              _infoTile(
+              _SectionTitle(l.hhStart),
+              _InfoTile(
                 icon: Icons.play_circle_fill_rounded,
                 title: _isActive ? l.hhActiveNow : l.hhStartsNow,
                 highlighted: true,
@@ -286,56 +279,63 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
               const SizedBox(height: 24),
 
               // ── End (optional) ─────────────────────────────────────────
-              _sectionTitle(l.hhEnd),
+              _SectionTitle(l.hhEnd),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _endChip(l.hhNoEnd, _EndChoice.none),
-                  _endChip('+1 h', _EndChoice.plus1h),
-                  _endChip('+2 h', _EndChoice.plus2h),
-                  _endChip('+3 h', _EndChoice.plus3h),
-                  _endChip(l.hhEndOfDay, _EndChoice.tonight),
-                  _endChip(l.hhOtherDate, _EndChoice.custom),
+                  for (final (label, choice) in [
+                    (l.hhNoEnd, HappyHourEnd.none),
+                    ('+1 h', HappyHourEnd.plus1h),
+                    ('+2 h', HappyHourEnd.plus2h),
+                    ('+3 h', HappyHourEnd.plus3h),
+                    (l.hhEndOfDay, HappyHourEnd.tonight),
+                    (l.hhOtherDate, HappyHourEnd.custom),
+                  ])
+                    _EndChip(
+                      label: label,
+                      selected: state.endChoice == choice,
+                      onSelected: () => _chooseEnd(choice),
+                    ),
                 ],
               ),
               const SizedBox(height: 10),
-              _infoTile(
-                icon: _endTime == null
+              _InfoTile(
+                icon: state.endTime == null
                     ? Icons.all_inclusive_rounded
                     : Icons.timer_outlined,
-                title: _endTime == null
+                title: state.endTime == null
                     ? l.hhNoEndHint
-                    : l.hhEndsAt(_formatDateTime(_endTime!)),
-                highlighted: _endTime != null,
+                    : l.hhEndsAt(_formatDateTime(state.endTime!)),
+                highlighted: state.endTime != null,
               ),
 
               const SizedBox(height: 24),
 
               // ── Quantity (optional) ────────────────────────────────────
-              _sectionTitle(l.hhQuantity),
+              _SectionTitle(l.hhQuantity),
               Wrap(
                 spacing: 8,
                 children: [
                   ChoiceChip(
                     label: Text(l.hhUnlimited),
-                    selected: !_limited,
-                    onSelected: (_) => setState(() => _limited = false),
+                    selected: !state.limited,
+                    onSelected: (_) => controller.setLimited(false),
                     selectedColor: AppColors.secondary.withOpacity(0.18),
                   ),
                   ChoiceChip(
                     label: Text(l.hhLimited),
-                    selected: _limited,
-                    onSelected: (_) => setState(() => _limited = true),
+                    selected: state.limited,
+                    onSelected: (_) => controller.setLimited(true),
                     selectedColor: AppColors.secondary.withOpacity(0.18),
                   ),
                 ],
               ),
-              if (_limited) ...[
+              if (state.limited) ...[
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    _stepButton(Icons.remove_rounded, -1),
+                    _StepButton(icon: Icons.remove_rounded, onTap: () => _step(-1)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextFormField(
@@ -349,16 +349,13 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
                           hint: l.hhQuantityHint,
                           icon: Icons.inventory_2_rounded,
                         ),
-                        validator: (v) {
-                          if (!_limited) return null;
-                          final n = int.tryParse(v ?? '');
-                          if (n == null || n < 1) return l.hhQuantityInvalid;
-                          return null;
-                        },
+                        validator: (v) => controller.validateQuantity(v) != null
+                            ? l.hhQuantityInvalid
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 10),
-                    _stepButton(Icons.add_rounded, 1),
+                    _StepButton(icon: Icons.add_rounded, onTap: () => _step(1)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -375,8 +372,8 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _activate,
-                  icon: _isLoading
+                  onPressed: state.isLoading ? null : _activate,
+                  icon: state.isLoading
                       ? const SizedBox(
                           width: 18,
                           height: 18,
@@ -405,7 +402,7 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _clear,
+                    onPressed: state.isLoading ? null : _clear,
                     icon: const Icon(Icons.stop_circle_outlined),
                     label: Text(l.clearHappyHour,
                         style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -421,30 +418,7 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
               ],
 
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.info.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.info.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline_rounded,
-                        color: AppColors.info, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        l.hhLiveInfo,
-                        style: const TextStyle(
-                            color: AppColors.info,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const _LiveNote(),
             ],
           ),
         ),
@@ -452,10 +426,75 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
     );
   }
 
-  /// Item name, the normal price, and a live preview of the deal: new price
-  /// and discount badge update as the partner types.
-  Widget _header(AppLocalizations l, int percent, String original) {
-    final price = _price;
+  /// "26/09 21:30" — short enough for one line in any of the three languages.
+  String _formatDateTime(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+}
+
+InputDecoration _inputDecoration({
+  required String hint,
+  required IconData icon,
+  String? suffix,
+}) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: AppColors.textLight),
+    prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
+    suffixText: suffix,
+    filled: true,
+    fillColor: AppColors.background,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+          color: AppColors.textLight.withOpacity(0.15), width: 1.5),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.secondary, width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.error, width: 2),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+  );
+}
+
+// ── Sections ──────────────────────────────────────────────────────────────────
+
+/// Item name, the normal price, and a live preview of the deal: new price
+/// and discount badge update as the partner types.
+class _DealHeader extends StatelessWidget {
+  const _DealHeader({
+    required this.itemName,
+    required this.price,
+    required this.percent,
+    required this.original,
+    required this.limited,
+    required this.quantityText,
+  });
+
+  final String itemName;
+  final double? price;
+  final int percent;
+  final String original;
+  final bool limited;
+  final String quantityText;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final price = this.price;
     final hasDeal = percent > 0 && price != null;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -484,7 +523,7 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.itemName,
+                  itemName,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -521,11 +560,11 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.85), fontSize: 13),
                   ),
-                if (_limited &&
-                    (int.tryParse(_quantityController.text) ?? 0) > 0) ...[
+                if (limited &&
+                    (int.tryParse(quantityText) ?? 0) > 0) ...[
                   const SizedBox(height: 4),
                   Text(
-                    l.hhUnitsLeft(int.parse(_quantityController.text)),
+                    l.hhUnitsLeft(int.parse(quantityText)),
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 12,
@@ -555,8 +594,15 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
       ),
     );
   }
+}
 
-  Widget _sectionTitle(String text) => Padding(
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(
           text,
@@ -566,13 +612,25 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
               ?.copyWith(fontWeight: FontWeight.w600),
         ),
       );
+}
 
-  Widget _endChip(String label, _EndChoice choice) {
-    final selected = _endChoice == choice;
+class _EndChip extends StatelessWidget {
+  const _EndChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
-      onSelected: (_) => _chooseEnd(choice),
+      onSelected: (_) => onSelected(),
       selectedColor: AppColors.secondary.withOpacity(0.18),
       labelStyle: TextStyle(
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
@@ -580,12 +638,21 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
       ),
     );
   }
+}
 
-  Widget _infoTile({
-    required IconData icon,
-    required String title,
-    bool highlighted = false,
-  }) {
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({
+    required this.icon,
+    required this.title,
+    this.highlighted = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -620,18 +687,22 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
       ),
     );
   }
+}
 
-  Widget _stepButton(IconData icon, int delta) {
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: AppColors.secondary.withOpacity(0.12),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          final current = int.tryParse(_quantityController.text) ?? 0;
-          final next = (current + delta).clamp(1, 9999);
-          setState(() => _quantityController.text = '$next');
-        },
+        onTap: onTap,
         child: SizedBox(
           width: 48,
           height: 52,
@@ -640,47 +711,37 @@ class _HappyHourSetupScreenState extends ConsumerState<HappyHourSetupScreen> {
       ),
     );
   }
+}
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    required IconData icon,
-    String? suffix,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textLight),
-      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
-      suffixText: suffix,
-      filled: true,
-      fillColor: AppColors.background,
-      border: OutlineInputBorder(
+class _LiveNote extends StatelessWidget {
+  const _LiveNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.info.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+        border: Border.all(color: AppColors.info.withOpacity(0.2)),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-            color: AppColors.textLight.withOpacity(0.15), width: 1.5),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded,
+              color: AppColors.info, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              l.hhLiveInfo,
+              style: const TextStyle(
+                  color: AppColors.info,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.secondary, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.error, width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
-  }
-
-  /// "26/09 21:30" — short enough for one line in any of the three languages.
-  String _formatDateTime(DateTime dt) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(dt.day)}/${two(dt.month)} ${two(dt.hour)}:${two(dt.minute)}';
   }
 }

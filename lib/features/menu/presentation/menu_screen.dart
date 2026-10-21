@@ -11,7 +11,7 @@ import '../data/models/food_item.dart';
 import '../data/models/grocery_item.dart';
 import '../data/models/vendor_item.dart';
 import 'add_edit_item_screen.dart';
-import 'happy_hour_setup_screen.dart';
+import 'happy_hour_setup/happy_hour_setup_screen.dart';
 import 'promo_setup/promo_setup_screen.dart';
 import '../providers/menu_scanner_provider.dart';
 import 'package:image_picker/image_picker.dart';
