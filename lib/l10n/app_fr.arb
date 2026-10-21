@@ -281,7 +281,7 @@
     "deleteAccountDeletedContact": "Vos coordonnées : nom, téléphone, email, photo et adresse",
     "deleteAccountDeletedBank": "Vos coordonnées bancaires",
     "deleteAccountDeletedDevices": "Vos notifications et vos appareils connectés",
-    "deleteAccountShopClosed": "Votre boutique sera fermée et ne recevra plus de commandes",
+    "deleteAccountShopClosed": "Votre boutique sera fermée et retirée de l'app : elle ne recevra plus de commandes",
     "deleteAccountKeptTitle": "Ce qui sera gardé",
     "deleteAccountKeptOrders": "L'historique des commandes de votre boutique et vos produits",
     "deleteAccountKeptMoney": "Les règlements et l'historique de votre solde",

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../profile/presentation/help_support/help_support_screen.dart';
-import '../../data/models/deletion_blocker.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../profile/presentation/help_support/help_support_screen.dart';
+import '../../../data/models/deletion_blocker.dart';
 import 'blocker_text.dart';
 
 /// Ce qui empêche la suppression, chaque ligne disant quoi faire, et un

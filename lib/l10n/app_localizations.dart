@@ -1795,7 +1795,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountShopClosed.
   ///
   /// In en, this message translates to:
-  /// **'Your shop will be closed and will no longer receive orders'**
+  /// **'Your shop will be closed and removed from the app: it will no longer receive orders'**
   String get deleteAccountShopClosed;
 
   /// No description provided for @deleteAccountKeptTitle.

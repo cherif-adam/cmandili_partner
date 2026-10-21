@@ -882,7 +882,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteAccountShopClosed =>
-      'سيتم إغلاق متجرك ولن يستقبل طلبات بعد الآن';
+      'سيتم إغلاق متجرك وإزالته من التطبيق: لن يستقبل طلبات بعد الآن';
 
   @override
   String get deleteAccountKeptTitle => 'ما سيتم الاحتفاظ به';

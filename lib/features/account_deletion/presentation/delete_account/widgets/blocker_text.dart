@@ -1,6 +1,6 @@
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 
-import '../../data/models/deletion_blocker.dart';
+import '../../../data/models/deletion_blocker.dart';
 
 /// La phrase a montrer pour un blocage : ce qui bloque, et quoi faire.
 String blockerText(AppLocalizations l, DeletionBlocker b) {

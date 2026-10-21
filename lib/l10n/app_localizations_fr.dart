@@ -908,7 +908,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteAccountShopClosed =>
-      'Votre boutique sera fermée et ne recevra plus de commandes';
+      'Votre boutique sera fermée et retirée de l\'app : elle ne recevra plus de commandes';
 
   @override
   String get deleteAccountKeptTitle => 'Ce qui sera gardé';

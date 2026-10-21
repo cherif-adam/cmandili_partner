@@ -281,7 +281,7 @@
     "deleteAccountDeletedContact": "بياناتك الشخصية: الاسم والهاتف والبريد الإلكتروني والصورة والعنوان",
     "deleteAccountDeletedBank": "بياناتك البنكية",
     "deleteAccountDeletedDevices": "إشعاراتك والأجهزة المتصلة",
-    "deleteAccountShopClosed": "سيتم إغلاق متجرك ولن يستقبل طلبات بعد الآن",
+    "deleteAccountShopClosed": "سيتم إغلاق متجرك وإزالته من التطبيق: لن يستقبل طلبات بعد الآن",
     "deleteAccountKeptTitle": "ما سيتم الاحتفاظ به",
     "deleteAccountKeptOrders": "سجل طلبات متجرك ومنتجاتك",
     "deleteAccountKeptMoney": "التسويات وسجل رصيدك",
