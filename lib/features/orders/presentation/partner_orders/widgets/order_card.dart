@@ -2,201 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
-import '../../../core/theme/app_colors.dart';
-import '../data/models/order.dart';
-import '../providers/partner_orders_provider.dart';
-import 'order_detail/order_detail_screen.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../data/models/order.dart';
+import '../../order_detail/order_detail_screen.dart';
+import '../partner_orders_controller.dart';
+import 'status_option.dart';
 
-class PartnerOrdersScreen extends ConsumerStatefulWidget {
-  const PartnerOrdersScreen({super.key});
-
-  @override
-  ConsumerState<PartnerOrdersScreen> createState() => _PartnerOrdersScreenState();
-}
-
-class _PartnerOrdersScreenState extends ConsumerState<PartnerOrdersScreen> {
-  OrderStatus? _filterStatus;
-
-  @override
-  Widget build(BuildContext context) {
-    final ordersAsync = ref.watch(partnerOrdersStreamProvider);
-    final l = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 120,
-            pinned: true,
-            backgroundColor: Colors.transparent,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
-                  ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l.orders,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l.manageOrdersRealtime,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white70,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Filter chips
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildFilterChip(null, l.all),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.pending, l.filterNew),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.confirmed, l.confirmedFilter),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.preparing, l.preparingFilter),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.ready, l.ready),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.delivered, l.delivered),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Orders list
-          ordersAsync.when(
-            data: (orders) {
-              final filtered = _filterStatus == null
-                  ? orders
-                  : orders.where((o) => o.status == _filterStatus).toList();
-
-              if (filtered.isEmpty) {
-                return SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_rounded,
-                          size: 64,
-                          color: AppColors.textLight,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l.noOrdersYet,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l.newOrdersAppearHere,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textLight,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _OrderCard(order: filtered[index]),
-                    ),
-                    childCount: filtered.length,
-                  ),
-                ),
-              );
-            },
-            loading: () => const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => SliverFillRemaining(
-              child: Center(
-                child: Text(
-                  l.couldNotLoadOrders,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(OrderStatus? status, String label) {
-    final isSelected = _filterStatus == status;
-    return GestureDetector(
-      onTap: () => setState(() => _filterStatus = status),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : AppColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OrderCard extends ConsumerWidget {
+/// One order in the list: first item and customer, time and status, total,
+/// and the status sheet. Tapping opens the order.
+class OrderCard extends ConsumerWidget {
   final Order order;
-  const _OrderCard({required this.order});
+  const OrderCard({super.key, required this.order});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -383,7 +199,7 @@ class _OrderCard extends ConsumerWidget {
   }
 
   void _showStatusSheet(BuildContext context, WidgetRef ref) {
-    final nextStatuses = _nextStatuses(order.status);
+    final nextStatuses = PartnerOrdersController.nextStatuses(order.status);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -416,15 +232,15 @@ class _OrderCard extends ConsumerWidget {
               style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
-            ...nextStatuses.map((status) => _StatusOption(
+            ...nextStatuses.map((status) => StatusOption(
                   status: status,
                   onTap: () async {
                     Navigator.pop(ctx);
                     final messenger = ScaffoldMessenger.of(context);
                     try {
                       await ref
-                          .read(partnerOrderRepositoryProvider)
-                          .updateOrderStatus(order.id, status);
+                          .read(partnerOrdersControllerProvider.notifier)
+                          .updateStatus(order.id, status);
                       messenger.showSnackBar(SnackBar(
                         content: Text(
                           'Order updated to ${status.toString().split('.').last}',
@@ -443,24 +259,6 @@ class _OrderCard extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  List<OrderStatus> _nextStatuses(OrderStatus current) {
-    switch (current) {
-      case OrderStatus.pending:
-        return [OrderStatus.confirmed, OrderStatus.cancelled];
-      case OrderStatus.confirmed:
-        return [OrderStatus.preparing, OrderStatus.cancelled];
-      case OrderStatus.preparing:
-        return [OrderStatus.ready];
-      case OrderStatus.ready:
-        return [OrderStatus.pickedUp, OrderStatus.onTheWay];
-      case OrderStatus.pickedUp:
-      case OrderStatus.onTheWay:
-        return [OrderStatus.delivered];
-      default:
-        return [];
-    }
   }
 
   Color _statusColor(OrderStatus status) {
@@ -487,71 +285,5 @@ class _OrderCard extends ConsumerWidget {
     final hour = dt.hour.toString().padLeft(2, '0');
     final min = dt.minute.toString().padLeft(2, '0');
     return '$hour:$min';
-  }
-}
-
-class _StatusOption extends StatelessWidget {
-  final OrderStatus status;
-  final VoidCallback onTap;
-  const _StatusOption({required this.status, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final label = _label(status, context);
-    final color = _color(status);
-    return ListTile(
-      onTap: onTap,
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(_icon(status), color: color, size: 20),
-      ),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-    );
-  }
-
-  String _label(OrderStatus s, BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    switch (s) {
-      case OrderStatus.confirmed: return l.confirmOrder;
-      case OrderStatus.preparing: return l.startPreparing;
-      case OrderStatus.ready: return l.markAsReady;
-      case OrderStatus.pickedUp: return l.pickedUp;
-      case OrderStatus.onTheWay: return l.outForDelivery;
-      case OrderStatus.delivered: return l.markAsDelivered;
-      case OrderStatus.cancelled: return l.cancelOrder;
-      default: return s.toString().split('.').last;
-    }
-  }
-
-  IconData _icon(OrderStatus s) {
-    switch (s) {
-      case OrderStatus.confirmed: return Icons.check_circle_outline_rounded;
-      case OrderStatus.preparing: return Icons.restaurant_rounded;
-      case OrderStatus.ready: return Icons.done_all_rounded;
-      case OrderStatus.pickedUp: return Icons.directions_bike_rounded;
-      case OrderStatus.onTheWay: return Icons.delivery_dining_rounded;
-      case OrderStatus.delivered: return Icons.home_rounded;
-      case OrderStatus.cancelled: return Icons.cancel_outlined;
-      default: return Icons.circle_outlined;
-    }
-  }
-
-  Color _color(OrderStatus s) {
-    switch (s) {
-      case OrderStatus.confirmed: return AppColors.info;
-      case OrderStatus.preparing: return AppColors.warning;
-      case OrderStatus.ready: return AppColors.accent;
-      case OrderStatus.pickedUp:
-      case OrderStatus.onTheWay: return AppColors.secondary;
-      case OrderStatus.delivered: return AppColors.success;
-      case OrderStatus.cancelled: return AppColors.error;
-      default: return AppColors.primary;
-    }
   }
 }
