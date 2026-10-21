@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../features/orders/data/models/order.dart';
 import '../../features/orders/data/partner_order_repository.dart';
-import '../../features/orders/presentation/order_detail_screen.dart';
+import '../../features/orders/presentation/order_detail/order_detail_screen.dart';
 
 /// Deep-link routing for order notifications.
 ///

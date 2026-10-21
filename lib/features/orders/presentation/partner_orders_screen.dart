@@ -5,7 +5,7 @@ import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../data/models/order.dart';
 import '../providers/partner_orders_provider.dart';
-import 'order_detail_screen.dart';
+import 'order_detail/order_detail_screen.dart';
 
 class PartnerOrdersScreen extends ConsumerStatefulWidget {
   const PartnerOrdersScreen({super.key});
