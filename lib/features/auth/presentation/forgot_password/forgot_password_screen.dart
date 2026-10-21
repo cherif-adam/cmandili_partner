@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../reset_password_screen.dart';
+import '../reset_password/reset_password_screen.dart';
 import 'forgot_password_controller.dart';
 
 /// "Mot de passe oublié", over the orange gradient, top to bottom:
