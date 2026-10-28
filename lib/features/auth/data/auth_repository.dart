@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'models/partner_model.dart';
@@ -334,6 +335,19 @@ class AuthRepository {
 
   // Sign out
   Future<void> signOut() async {
+    // Le jeton push de ce telephone part d'abord, comme dans l'app livreur :
+    // reste dans device_tokens, il continuait a recevoir les alarmes de
+    // commande de cette boutique apres qu'un autre compte s'est connecte sur
+    // le telephone (PushService le reinscrit a la connexion suivante). Avant
+    // auth.signOut() : la policy RLS a besoin d'auth.uid().
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _supabase.from('device_tokens').delete().eq('token', token);
+      }
+    } catch (e) {
+      debugPrint('signOut: jeton push non retire ($e)');
+    }
     // La session Supabase est ce sur quoi l'app s'oriente : elle doit finir
     // meme si la deconnexion Google echoue (utilisateur jamais passe par Google).
     try {
