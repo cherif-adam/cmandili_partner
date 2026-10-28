@@ -34,8 +34,14 @@ class User {
 
 class AuthRepository {
   final _supabase = supabase.Supabase.instance.client;
+  // The web client of the Firebase project in android/app/google-services.json
+  // (cmandili-c1ade). Google Sign-In on Android only works when it belongs to
+  // the same project as the app's Android OAuth client (package + SHA-1), and
+  // Supabase only accepts tokens issued for a client ID listed in its Google
+  // provider. The previous ID came from another project.
+  // test/google_sign_in_config_test.dart keeps the two files in step.
   final _googleSignIn = GoogleSignIn(
-    serverClientId: '1047309149711-09in2f2qoce5upqcno61ekuevp2e5hjk.apps.googleusercontent.com',
+    serverClientId: '785469526658-r0cl6q3cgourm68om0oo3pk4077auo4r.apps.googleusercontent.com',
   );
 
   // Get current user
