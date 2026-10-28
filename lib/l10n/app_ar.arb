@@ -314,5 +314,7 @@
     "deleteAccountRetry": "إعادة المحاولة",
     "deleteAccountDoneTitle": "تم حذف الحساب",
     "deleteAccountDoneBody": "تم حذف حسابك. شكراً لعملك مع أمانة.",
-    "deleteAccountDoneOk": "حسناً"
+    "deleteAccountDoneOk": "حسناً",
+    "privacyPolicy": "سياسة الخصوصية",
+    "privacyPolicyOpenFailed": "تعذّر فتح الصفحة. تحقّق من اتصالك."
 }

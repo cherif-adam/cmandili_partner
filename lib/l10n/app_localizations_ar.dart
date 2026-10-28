@@ -1005,4 +1005,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteAccountDoneOk => 'حسناً';
+
+  @override
+  String get privacyPolicy => 'سياسة الخصوصية';
+
+  @override
+  String get privacyPolicyOpenFailed => 'تعذّر فتح الصفحة. تحقّق من اتصالك.';
 }

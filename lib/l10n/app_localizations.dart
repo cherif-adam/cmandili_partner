@@ -1995,6 +1995,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'OK'**
   String get deleteAccountDoneOk;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @privacyPolicyOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The page could not be opened. Check your connection.'**
+  String get privacyPolicyOpenFailed;
 }
 
 class _AppLocalizationsDelegate

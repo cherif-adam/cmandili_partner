@@ -325,5 +325,7 @@
     "deleteAccountRetry": "Retry",
     "deleteAccountDoneTitle": "Account deleted",
     "deleteAccountDoneBody": "Your account has been deleted. Thank you for working with Amana.",
-    "deleteAccountDoneOk": "OK"
+    "deleteAccountDoneOk": "OK",
+    "privacyPolicy": "Privacy policy",
+    "privacyPolicyOpenFailed": "The page could not be opened. Check your connection."
 }

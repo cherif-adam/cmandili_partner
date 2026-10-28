@@ -314,5 +314,7 @@
     "deleteAccountRetry": "Réessayer",
     "deleteAccountDoneTitle": "Compte supprimé",
     "deleteAccountDoneBody": "Votre compte a été supprimé. Merci d'avoir travaillé avec Amana.",
-    "deleteAccountDoneOk": "OK"
+    "deleteAccountDoneOk": "OK",
+    "privacyPolicy": "Politique de confidentialité",
+    "privacyPolicyOpenFailed": "La page n'a pas pu s'ouvrir. Vérifiez votre connexion."
 }

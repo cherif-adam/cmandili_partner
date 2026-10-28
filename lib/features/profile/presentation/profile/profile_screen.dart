@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../auth/data/models/partner_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/privacy_policy.dart';
 import '../../../auth/providers/auth_provider.dart';
 import 'package:cmandili_partner/l10n/app_localizations.dart';
 import '../../../../core/providers/localization_provider.dart';
@@ -138,6 +139,11 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
                   },
+                ),
+                _ProfileItem(
+                  icon: Icons.privacy_tip_outlined,
+                  title: AppLocalizations.of(context)!.privacyPolicy,
+                  onTap: () => openPrivacyPolicy(context),
                 ),
                 SizedBox(height: screenHeight * 0.03),
                 _ProfileItem(

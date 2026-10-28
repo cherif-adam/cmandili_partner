@@ -1038,4 +1038,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteAccountDoneOk => 'OK';
+
+  @override
+  String get privacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get privacyPolicyOpenFailed =>
+      'La page n\'a pas pu s\'ouvrir. Vérifiez votre connexion.';
 }

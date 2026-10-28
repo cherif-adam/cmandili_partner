@@ -1019,4 +1019,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteAccountDoneOk => 'OK';
+
+  @override
+  String get privacyPolicy => 'Privacy policy';
+
+  @override
+  String get privacyPolicyOpenFailed =>
+      'The page could not be opened. Check your connection.';
 }
