@@ -19,13 +19,14 @@ class OrderDetailController extends AutoDisposeNotifier<bool> {
   // ── User actions ──────────────────────────────────────────────────────────
 
   /// The statuses the partner may move [current] to, for this shop's type.
-  List<OrderStatus> nextStatusesFor(OrderStatus current) {
+  List<OrderStatus> nextStatusesFor(OrderStatus current, {bool selfDelivery = false}) {
     final partnerType = ref.read(partnerProfileProvider).valueOrNull?.partnerType;
     return nextStatuses(
       current,
       // Par defaut on garde l'etape de preparation : si le profil n'est pas
       // encore charge, mieux vaut un bouton de trop qu'un statut saute.
       skipsPreparation: partnerType != null && partnerType != 'restaurant',
+      selfDelivery: selfDelivery,
     );
   }
 
@@ -98,7 +99,12 @@ class OrderDetailController extends AutoDisposeNotifier<bool> {
   /// n'impose l'ordre des statuts, le dispatch livreur se declenche sur
   /// l'entree en 'ready' quel que soit le statut precedent, et `confirmed_at`
   /// comme `ready_at` sont horodates sur leurs propres statuts.
-  static List<OrderStatus> nextStatuses(OrderStatus current, {required bool skipsPreparation}) {
+  ///
+  /// « Livree » seulement pour une commande que la boutique livre elle-meme :
+  /// portee par un livreur, c'est lui qui la livre (la base le refuse au
+  /// partenaire).
+  static List<OrderStatus> nextStatuses(OrderStatus current,
+      {required bool skipsPreparation, bool selfDelivery = false}) {
     switch (current) {
       case OrderStatus.pending: return [OrderStatus.confirmed, OrderStatus.cancelled];
       case OrderStatus.confirmed:
@@ -109,7 +115,7 @@ class OrderDetailController extends AutoDisposeNotifier<bool> {
       case OrderStatus.preparing: return [OrderStatus.ready];
       case OrderStatus.ready: return [OrderStatus.pickedUp, OrderStatus.onTheWay];
       case OrderStatus.pickedUp:
-      case OrderStatus.onTheWay: return [OrderStatus.delivered];
+      case OrderStatus.onTheWay: return selfDelivery ? [OrderStatus.delivered] : [];
       default: return [];
     }
   }

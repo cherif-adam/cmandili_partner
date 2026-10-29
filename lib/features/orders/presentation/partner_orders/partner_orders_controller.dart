@@ -29,7 +29,10 @@ class PartnerOrdersController extends AutoDisposeNotifier<OrderStatus?> {
       ? orders
       : orders.where((o) => o.status == state).toList();
 
-  static List<OrderStatus> nextStatuses(OrderStatus current) {
+  /// "Delivered" only for an order the shop delivers itself: when a driver
+  /// carries it, the driver marks it delivered (the database refuses it from
+  /// the partner).
+  static List<OrderStatus> nextStatuses(OrderStatus current, {bool selfDelivery = false}) {
     switch (current) {
       case OrderStatus.pending:
         return [OrderStatus.confirmed, OrderStatus.cancelled];
@@ -41,7 +44,7 @@ class PartnerOrdersController extends AutoDisposeNotifier<OrderStatus?> {
         return [OrderStatus.pickedUp, OrderStatus.onTheWay];
       case OrderStatus.pickedUp:
       case OrderStatus.onTheWay:
-        return [OrderStatus.delivered];
+        return selfDelivery ? [OrderStatus.delivered] : [];
       default:
         return [];
     }

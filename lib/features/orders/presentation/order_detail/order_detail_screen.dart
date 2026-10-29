@@ -23,7 +23,12 @@ class OrderDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(orderDetailControllerProvider.notifier);
-    final isOpen = order.status != OrderStatus.delivered && order.status != OrderStatus.cancelled;
+    // Nothing to offer (finished, or carried by a driver who marks it
+    // delivered himself): no update button.
+    final canUpdate = ref
+        .read(orderDetailControllerProvider.notifier)
+        .nextStatusesFor(order.status, selfDelivery: order.selfDelivery)
+        .isNotEmpty;
     final showBanner = OrderDetailController.showSelfDeliveryBanner(order);
 
     return Scaffold(
@@ -41,7 +46,7 @@ class OrderDetailScreen extends ConsumerWidget {
         children: [
           _StatusBanner(
             order: order,
-            onUpdate: isOpen ? () => _showStatusSheet(context, ref) : null,
+            onUpdate: canUpdate ? () => _showStatusSheet(context, ref) : null,
           ),
 
           const SizedBox(height: 16),
@@ -91,7 +96,7 @@ class OrderDetailScreen extends ConsumerWidget {
           if (showBanner) const SizedBox(height: 12),
 
           // Action buttons for non-final statuses
-          if (isOpen)
+          if (canUpdate)
             _UpdateStatusButton(onPressed: () => _showStatusSheet(context, ref)),
 
           // Cancel stays available only while the food is still in the shop.
@@ -111,7 +116,7 @@ class OrderDetailScreen extends ConsumerWidget {
       context: context,
       statuses: ref
           .read(orderDetailControllerProvider.notifier)
-          .nextStatusesFor(order.status),
+          .nextStatusesFor(order.status, selfDelivery: order.selfDelivery),
       onPick: (s) async {
         final messenger = ScaffoldMessenger.of(context);
         try {

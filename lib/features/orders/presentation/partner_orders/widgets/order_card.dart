@@ -169,7 +169,8 @@ class OrderCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (order.status != OrderStatus.delivered && order.status != OrderStatus.cancelled)
+              if (PartnerOrdersController.nextStatuses(order.status, selfDelivery: order.selfDelivery)
+                  .isNotEmpty)
                 TextButton.icon(
                   onPressed: () => _showStatusSheet(context, ref),
                   icon: const Icon(Icons.edit_rounded, size: 16),
@@ -199,7 +200,8 @@ class OrderCard extends ConsumerWidget {
   }
 
   void _showStatusSheet(BuildContext context, WidgetRef ref) {
-    final nextStatuses = PartnerOrdersController.nextStatuses(order.status);
+    final nextStatuses =
+        PartnerOrdersController.nextStatuses(order.status, selfDelivery: order.selfDelivery);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
