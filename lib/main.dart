@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/presentation/auth/auth_screen.dart';
@@ -12,7 +11,7 @@ import 'core/providers/localization_provider.dart';
 import 'core/providers/theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'core/config/supabase_config.dart';
+import 'core/config/build_config.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/push/push_service.dart';
 import 'core/push/notification_navigation.dart';
@@ -22,18 +21,21 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // dotenv MUST resolve first — SupabaseConfig reads from it. Then run
-  // Supabase + Firebase in parallel.
+  // Built without --dart-define-from-file: say so now rather than fail later
+  // on an empty Supabase URL. Then run Supabase + Firebase in parallel.
   //
   // Google Maps needs no runtime token call: the key is read from the native
   // manifest/plist at process start, so there is no equivalent of Mapbox's
   // MapboxOptions.setAccessToken here.
-  await dotenv.load(fileName: '.env');
+  if (BuildConfig.missing.isNotEmpty) {
+    throw StateError('Missing ${BuildConfig.missing.join(', ')}: build with '
+        '--dart-define-from-file=dart_defines.json');
+  }
 
   await Future.wait([
     Supabase.initialize(
-      url: SupabaseConfig.url,
-      anonKey: SupabaseConfig.anonKey,
+      url: BuildConfig.supabaseUrl,
+      anonKey: BuildConfig.supabaseAnonKey,
     ),
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
         .catchError((_) => Firebase.app()),
@@ -81,8 +83,8 @@ class MyApp extends ConsumerWidget {
         OrderWatchService.start(
           entityId: profile.entityId,
           partnerType: profile.partnerType,
-          supabaseUrl: SupabaseConfig.url,
-          supabaseAnonKey: SupabaseConfig.anonKey,
+          supabaseUrl: BuildConfig.supabaseUrl,
+          supabaseAnonKey: BuildConfig.supabaseAnonKey,
         );
       }
     });
