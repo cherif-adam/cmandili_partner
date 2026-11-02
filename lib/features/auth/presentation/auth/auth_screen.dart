@@ -13,7 +13,7 @@ import 'auth_controller.dart';
 ///   _GradientBackground, _FloatingCircles
 ///   _LanguageButton   (top right)
 ///   _LogoHeader       logo, app name, welcome line
-///   _AuthCard         tabs, form, "ou", Google
+///   _AuthCard         tabs, form, "ou", Google (not on iPhone)
 ///   build label       (debug builds only)
 ///
 /// UI only: loading, show/hide, the shop type, the e-mail and Google
@@ -499,7 +499,8 @@ class _LogoHeader extends StatelessWidget {
   }
 }
 
-/// The frosted card: tabs, the form of the current tab, "ou", Google.
+/// The frosted card: tabs, the form of the current tab, "ou", Google (not
+/// on iPhone).
 class _AuthCard extends StatelessWidget {
   const _AuthCard({
     required this.tabController,
@@ -576,24 +577,28 @@ class _AuthCard extends StatelessWidget {
                 onSubmit: onSubmit,
               ),
 
-              SizedBox(height: screenHeight * 0.02),
+              // "ou" and Google: not on iPhone (see [showGoogleSignIn]).
+              if (showGoogleSignIn) ...[
+                SizedBox(height: screenHeight * 0.02),
 
-              // Divider
-              const _OrDivider(),
+                // Divider
+                const _OrDivider(),
 
-              SizedBox(height: screenHeight * 0.02),
+                SizedBox(height: screenHeight * 0.02),
 
-              // Social Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _SocialButton(
-                    icon: Icons.g_mobiledata_rounded,
-                    onPressed: onGoogle,
-                    isLoading: state.isLoading,
-                  ),
-                ],
-              ),
+                // Social Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _SocialButton(
+                      key: const Key('auth_google'),
+                      icon: Icons.g_mobiledata_rounded,
+                      onPressed: onGoogle,
+                      isLoading: state.isLoading,
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -960,6 +965,7 @@ class _AuthTextField extends StatelessWidget {
 
 class _SocialButton extends StatelessWidget {
   const _SocialButton({
+    super.key,
     required this.icon,
     required this.onPressed,
     required this.isLoading,

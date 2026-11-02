@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -143,6 +144,12 @@ class AuthScreenController
     }
   }
 }
+
+/// Whether the login screen offers Google sign-in: not on iPhone. Apple
+/// rejects an iPhone app that offers Google without Sign in with Apple
+/// (App Store guideline 4.8), and this app has no Apple sign-in. iPhone
+/// partners use e-mail and password.
+bool get showGoogleSignIn => defaultTargetPlatform != TargetPlatform.iOS;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
