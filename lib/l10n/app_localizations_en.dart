@@ -982,6 +982,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'For your security, you will sign in again with this account\'s Google account.';
 
   @override
+  String get deleteAccountAppleHint =>
+      'For your security, you will sign in again with Apple.';
+
+  @override
   String get deleteAccountSubmit => 'Permanently delete my account';
 
   @override

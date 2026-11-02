@@ -13,7 +13,7 @@ import 'auth_controller.dart';
 ///   _GradientBackground, _FloatingCircles
 ///   _LanguageButton   (top right)
 ///   _LogoHeader       logo, app name, welcome line
-///   _AuthCard         tabs, form, "ou", Google (not on iPhone)
+///   _AuthCard         tabs, form, "ou", Apple (iPhone) and Google
 ///   build label       (debug builds only)
 ///
 /// UI only: loading, show/hide, the shop type, the e-mail and Google
@@ -177,8 +177,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
+  Future<void> _handleAppleSignIn() async {
     try {
+      final hasSession = await ref.read(_provider.notifier).signInWithApple();
+      if (mounted && hasSession && Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(friendlyAuthErrorMessage(e)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {    try {
       final hasSession = await ref.read(_provider.notifier).signInWithGoogle();
       // Comme la connexion par email : ne jamais laisser un ecran de connexion
       // empile par-dessus l'accueil.
@@ -268,6 +286,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         onSelectPartnerType: controller.selectPartnerType,
                         onSubmit: _handleEmailAuth,
                         onGoogle: _handleGoogleSignIn,
+                        onApple: showAppleSignIn ? _handleAppleSignIn : null,
                       ),
                     ),
                   ),
@@ -499,8 +518,8 @@ class _LogoHeader extends StatelessWidget {
   }
 }
 
-/// The frosted card: tabs, the form of the current tab, "ou", Google (not
-/// on iPhone).
+/// The frosted card: tabs, the form of the current tab, "ou", Apple
+/// (iPhone only) and Google.
 class _AuthCard extends StatelessWidget {
   const _AuthCard({
     required this.tabController,
@@ -515,6 +534,7 @@ class _AuthCard extends StatelessWidget {
     required this.onSelectPartnerType,
     required this.onSubmit,
     required this.onGoogle,
+    required this.onApple,
   });
 
   final TabController tabController;
@@ -529,6 +549,9 @@ class _AuthCard extends StatelessWidget {
   final void Function(String) onSelectPartnerType;
   final VoidCallback onSubmit;
   final VoidCallback onGoogle;
+
+  /// Null hides the Apple button (everywhere but iPhone).
+  final VoidCallback? onApple;
 
   @override
   Widget build(BuildContext context) {
@@ -577,30 +600,34 @@ class _AuthCard extends StatelessWidget {
                 onSubmit: onSubmit,
               ),
 
-              // "ou" and Google: not on iPhone (see [showGoogleSignIn]).
-              if (showGoogleSignIn) ...[
-                SizedBox(height: screenHeight * 0.02),
+              SizedBox(height: screenHeight * 0.02),
 
-                // Divider
-                const _OrDivider(),
+              // Divider
+              const _OrDivider(),
 
-                SizedBox(height: screenHeight * 0.02),
+              SizedBox(height: screenHeight * 0.02),
 
-                // Social Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
+              // Social Buttons: Apple first on iPhone, the same size as
+              // Google (Apple asks for a button at least as prominent).
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (onApple != null)
                     _SocialButton(
-                      key: const Key('auth_google'),
-                      icon: Icons.g_mobiledata_rounded,
-                      onPressed: onGoogle,
+                      key: const Key('auth_apple'),
+                      icon: Icons.apple,
+                      onPressed: onApple!,
                       isLoading: state.isLoading,
                     ),
-                  ],
-                ),
-              ],
-            ],
-          ),
+                  _SocialButton(
+                    key: const Key('auth_google'),
+                    icon: Icons.g_mobiledata_rounded,
+                    onPressed: onGoogle,
+                    isLoading: state.isLoading,
+                  ),
+                ],
+              ),
+            ],          ),
         ),
       ),
     );

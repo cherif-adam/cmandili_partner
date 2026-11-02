@@ -1930,6 +1930,12 @@ abstract class AppLocalizations {
   /// **'For your security, you will sign in again with this account\'s Google account.'**
   String get deleteAccountGoogleHint;
 
+  /// No description provided for @deleteAccountAppleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For your security, you will sign in again with Apple.'**
+  String get deleteAccountAppleHint;
+
   /// No description provided for @deleteAccountSubmit.
   ///
   /// In en, this message translates to:

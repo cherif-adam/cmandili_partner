@@ -971,6 +971,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'لأمانك، ستعيد تسجيل الدخول بحساب Google المرتبط بهذا الحساب.';
 
   @override
+  String get deleteAccountAppleHint =>
+      'Ù„Ø£Ù…Ø§Ù†ÙƒØŒ Ø³ØªØ¹ÙŠØ¯ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Apple.';
+
+  @override
   String get deleteAccountSubmit => 'حذف حسابي نهائياً';
 
   @override

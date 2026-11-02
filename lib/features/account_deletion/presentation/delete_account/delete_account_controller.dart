@@ -52,7 +52,7 @@ class DeleteAccountController
     return const DeleteAccountState();
   }
 
-  /// 'password', 'google', or null when the app offers no way to prove who
+  /// 'password', 'google', 'apple', or null when the app offers no way to prove who
   /// the user is (the form then only shows "contact the team").
   String? get reauthMethod => ref.read(authRepositoryProvider).reauthMethod;
 
@@ -82,9 +82,11 @@ class DeleteAccountController
     state = state.copyWith(busy: true, errorCode: () => null);
 
     final auth = ref.read(authRepositoryProvider);
-    final reauth = method == 'password'
-        ? await auth.reauthenticateWithPassword(password)
-        : await auth.reauthenticateWithGoogle();
+    final reauth = switch (method) {
+      'password' => await auth.reauthenticateWithPassword(password),
+      'apple' => await auth.reauthenticateWithApple(),
+      _ => await auth.reauthenticateWithGoogle(),
+    };
     if (_disposed) return null;
     if (reauth != null) {
       // Closing the Google picker is not an error.

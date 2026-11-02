@@ -315,6 +315,7 @@
     "deleteAccountPasswordHint": "For your security, enter your password",
     "deleteAccountPasswordLabel": "Password",
     "deleteAccountGoogleHint": "For your security, you will sign in again with this account's Google account.",
+    "deleteAccountAppleHint": "For your security, you will sign in again with Apple.",
     "deleteAccountSubmit": "Permanently delete my account",
     "deleteAccountErrorWrongPassword": "Incorrect password.",
     "deleteAccountErrorOtherGoogle": "This Google account is not the one linked to this Amana account.",

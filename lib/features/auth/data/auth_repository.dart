@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'models/partner_model.dart';
 
 // Simple User class to replace Firebase User
@@ -241,11 +245,61 @@ class AuthRepository {
     }
   }
 
-  // Apple Sign-In is not surfaced in the partner UI — reserved for future use.
+  // Sign in with Apple (iPhone): a nonce binds the Apple idToken to the
+  // Supabase session. Same steps as the customer app.
   Future<User?> signInWithApple() async {
-    throw UnimplementedError('Apple Sign In is not available in the partner app.');
+    try {
+      final rawNonce = _generateNonce();
+      final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+
+      final idToken = credential.identityToken;
+      if (idToken == null) throw 'Apple sign in failed: no identity token';
+
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: supabase.OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+
+      final user = response.user;
+      if (user == null) throw 'Apple sign in failed';
+
+      // Apple only shares the name on the first sign-in.
+      final fullName = [credential.givenName ?? '', credential.familyName ?? '']
+          .where((s) => s.isNotEmpty)
+          .join(' ')
+          .trim();
+      if (fullName.isNotEmpty) {
+        await _supabase.auth.updateUser(
+          supabase.UserAttributes(data: {'full_name': fullName}),
+        );
+      }
+
+      return User.fromSupabase(user);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      // Closing the Apple sheet is a cancel, like Google returning null.
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      debugPrint('Apple Sign In Error: $e');
+      rethrow;
+    } catch (e) {
+      debugPrint('Apple Sign In Error: $e');
+      rethrow;
+    }
   }
 
+  String _generateNonce([int length = 32]) {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._';
+    final rand = Random.secure();
+    return List.generate(length, (_) => chars[rand.nextInt(chars.length)]).join();
+  }
   // Fetch partner profile from partners table
   Future<PartnerProfile?> fetchPartnerProfile() async {
     final user = _supabase.auth.currentUser;
@@ -489,6 +543,7 @@ class AuthRepository {
         : ['${user.appMetadata['provider']}'];
     if (providers.contains('email')) return 'password';
     if (providers.contains('google')) return 'google';
+    if (providers.contains('apple')) return 'apple';
     return null;
   }
 
@@ -548,6 +603,43 @@ class AuthRepository {
       return null;
     } catch (e) {
       debugPrint('reauthenticateWithGoogle: $e');
+      return 'failed';
+    }
+  }
+
+  /// Comme [reauthenticateWithGoogle], avec Apple. Apple ne donne pas
+  /// l'email avant la connexion (et peut le masquer) : la verification se
+  /// fait sur l'utilisateur Supabase obtenu.
+  Future<String?> reauthenticateWithApple() async {
+    final current = _supabase.auth.currentUser;
+    if (current == null) return 'no_session';
+    try {
+      final rawNonce = _generateNonce();
+      final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [],
+        nonce: hashedNonce,
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null) return 'failed';
+
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: supabase.OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+      if (response.user?.id != current.id) {
+        // Autre utilisateur Supabase : on ne garde pas cette session-la.
+        await _supabase.auth.signOut(scope: supabase.SignOutScope.local);
+        return 'other_account';
+      }
+      return null;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return 'cancelled';
+      debugPrint('reauthenticateWithApple: $e');
+      return 'failed';
+    } catch (e) {
+      debugPrint('reauthenticateWithApple: $e');
       return 'failed';
     }
   }

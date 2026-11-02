@@ -143,13 +143,25 @@ class AuthScreenController
       _setLoading(false);
     }
   }
+
+  /// Sign in with Apple (iPhone only, see [showAppleSignIn]). Same contract
+  /// as [signInWithGoogle].
+  Future<bool> signInWithApple() async {
+    _setLoading(true);
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.signInWithApple();
+      return authRepo.hasSession;
+    } finally {
+      _setLoading(false);
+    }
+  }
 }
 
-/// Whether the login screen offers Google sign-in: not on iPhone. Apple
-/// rejects an iPhone app that offers Google without Sign in with Apple
-/// (App Store guideline 4.8), and this app has no Apple sign-in. iPhone
-/// partners use e-mail and password.
-bool get showGoogleSignIn => defaultTargetPlatform != TargetPlatform.iOS;
+/// Whether the login screen offers Sign in with Apple. Apple rejects an
+/// iPhone app that offers Google sign-in without it (App Store guideline
+/// 4.8); on Android it would need a web flow the app does not have.
+bool get showAppleSignIn => defaultTargetPlatform == TargetPlatform.iOS;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

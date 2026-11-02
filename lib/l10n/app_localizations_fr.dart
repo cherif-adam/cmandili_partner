@@ -1001,6 +1001,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Pour votre sécurité, vous allez vous reconnecter avec le compte Google de ce compte.';
 
   @override
+  String get deleteAccountAppleHint =>
+      'Pour votre sÃ©curitÃ©, vous allez vous reconnecter avec Apple.';
+
+  @override
   String get deleteAccountSubmit => 'Supprimer définitivement mon compte';
 
   @override

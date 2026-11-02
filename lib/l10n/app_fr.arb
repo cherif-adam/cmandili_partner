@@ -304,6 +304,7 @@
     "deleteAccountPasswordHint": "Pour votre sécurité, entrez votre mot de passe",
     "deleteAccountPasswordLabel": "Mot de passe",
     "deleteAccountGoogleHint": "Pour votre sécurité, vous allez vous reconnecter avec le compte Google de ce compte.",
+    "deleteAccountAppleHint": "Pour votre sÃ©curitÃ©, vous allez vous reconnecter avec Apple.",
     "deleteAccountSubmit": "Supprimer définitivement mon compte",
     "deleteAccountErrorWrongPassword": "Mot de passe incorrect.",
     "deleteAccountErrorOtherGoogle": "Ce compte Google n'est pas celui de ce compte Amana.",

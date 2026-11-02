@@ -26,6 +26,8 @@ dependencies:
   
   # Authentication (Removed for design-only mode)
   google_sign_in: ^6.1.6
+  sign_in_with_apple: ^6.1.0
+  crypto: ^3.0.3
   # sign_in_with_apple: ^5.0.0
   supabase_flutter: ^2.3.0
   

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,9 +9,9 @@ import 'package:cmandili_partner/l10n/app_localizations.dart';
 import 'package:cmandili_partner/features/auth/presentation/auth/auth_screen.dart';
 
 /// Apple rejects an iPhone app that offers Google sign-in without Sign in
-/// with Apple (App Store guideline 4.8). This app has no Apple sign-in, so
-/// on iPhone the login screen offers e-mail and password only; Android keeps
-/// Google.
+/// with Apple (App Store guideline 4.8). On iPhone the login screen shows
+/// Apple first, the same size as Google; Android keeps Google alone (Apple
+/// would need a web flow there).
 Future<void> pumpAuth(WidgetTester tester) async {
   tester.view.physicalSize = const Size(393, 852);
   tester.view.devicePixelRatio = 1.0;
@@ -36,13 +38,27 @@ void main() {
     );
   });
 
-  testWidgets('iPhone: no Google button', (tester) async {
+  testWidgets('iPhone: Apple button, before Google and as large',
+      (tester) async {
     await pumpAuth(tester);
-    expect(find.byKey(const Key('auth_google')), findsNothing);
+    final apple = find.byKey(const Key('auth_apple'));
+    final google = find.byKey(const Key('auth_google'));
+    expect(apple, findsOneWidget);
+    expect(google, findsOneWidget);
+    expect(tester.getCenter(apple).dx, lessThan(tester.getCenter(google).dx));
+    expect(tester.getSize(apple), tester.getSize(google));
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets('Android: Google button kept', (tester) async {
+  testWidgets('Android: Google only', (tester) async {
     await pumpAuth(tester);
+    expect(find.byKey(const Key('auth_apple')), findsNothing);
     expect(find.byKey(const Key('auth_google')), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  test('the iOS app is entitled to Sign in with Apple', () {
+    // Without it the Apple sheet fails at once (error 1000) on the phone.
+    final entitlements =
+        File('ios/Runner/Runner.entitlements').readAsStringSync();
+    expect(entitlements, contains('com.apple.developer.applesignin'));
+  });
 }

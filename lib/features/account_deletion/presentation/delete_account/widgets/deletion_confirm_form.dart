@@ -15,7 +15,7 @@ class DeletionConfirmForm extends StatelessWidget {
   final TextEditingController wordController;
   final TextEditingController passwordController;
 
-  /// 'password', 'google' or null (see [DeleteAccountController.reauthMethod]).
+  /// 'password', 'google', 'apple' or null (see [DeleteAccountController.reauthMethod]).
   final String? method;
   final bool showPassword;
   final bool busy;
@@ -88,6 +88,8 @@ class DeletionConfirmForm extends StatelessWidget {
             ),
           ] else if (method == 'google')
             Text(l.deleteAccountGoogleHint, style: TextStyle(fontSize: width * 0.036))
+          else if (method == 'apple')
+            Text(l.deleteAccountAppleHint, style: TextStyle(fontSize: width * 0.036))
           else
             Text(
               l.deleteAccountErrorNoMethod,
