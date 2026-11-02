@@ -56,5 +56,18 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
+	<key>GIDClientID</key>
+	<string>785469526658-q0q0ok65jnhd2pvviha96j3ren4rhpds.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.785469526658-q0q0ok65jnhd2pvviha96j3ren4rhpds</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
