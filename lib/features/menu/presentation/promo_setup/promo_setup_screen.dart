@@ -18,7 +18,7 @@ import 'promo_setup_controller.dart';
 ///
 /// Le prix affiche avant l'enregistrement vient de [computePromoPrice], la
 /// meme fonction que celle utilisee pour ecrire en base : le commercant voit
-/// le prix exact qui sera encaisse, au millime pres.
+/// le prix exact qui sera encaisse, arrondi a 50 millimes comme en base.
 ///
 /// Sur une CATEGORIE d'articles ([categoryName] renseigne), le pourcentage est
 /// le meme pour tous mais chaque article garde un prix calcule depuis le sien.

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/money.dart';
 import '../../providers/menu_provider.dart';
 
 /// How the partner chose the end of the deal. Kept separately from the
@@ -97,7 +98,8 @@ class HappyHourSetupController extends AutoDisposeFamilyNotifier<
       state.endTime != null && !state.endTime!.isAfter(DateTime.now());
 
   /// Puts the deal on [itemId]. [quantityText] counts only when the deal is
-  /// limited. Returns whether it was saved.
+  /// limited. Returns whether it was saved. The price is sent rounded to the
+  /// money step: the database would round it the same way anyway.
   Future<bool> activate({
     required String itemId,
     required double price,
@@ -106,7 +108,7 @@ class HappyHourSetupController extends AutoDisposeFamilyNotifier<
     _set(isLoading: true);
     final ok = await ref.read(menuRepositoryProvider).setHappyHour(
           itemId: itemId,
-          discountPrice: price,
+          discountPrice: roundMoney(price),
           endTime: state.endTime,
           quantity: state.limited ? int.parse(quantityText) : null,
         );
@@ -145,15 +147,20 @@ class HappyHourSetupController extends AutoDisposeFamilyNotifier<
     return ((originalPrice - p) / originalPrice * 100).round();
   }
 
-  /// The price [percent] below [originalPrice].
+  /// The price [percent] below [originalPrice], rounded to the money step
+  /// (12.9 DT at -15 % is 10.965, shown and saved as 10.95).
   static double priceForPercent(double originalPrice, int percent) =>
-      originalPrice * (100 - percent) / 100;
+      roundMoney(originalPrice * (100 - percent) / 100);
 
+  /// Checks the price that will actually be saved, i.e. once rounded to the
+  /// money step: 9.99 for a 10 DT item rounds to 10.00 and is no deal.
   static HappyHourFieldError? validatePrice(String? v, double originalPrice) {
     if (v == null || v.trim().isEmpty) return HappyHourFieldError.priceRequired;
     final d = parsePrice(v);
     if (d == null || d <= 0) return HappyHourFieldError.priceInvalid;
-    if (d >= originalPrice) return HappyHourFieldError.priceTooHigh;
+    final rounded = roundMoney(d);
+    if (rounded <= 0) return HappyHourFieldError.priceInvalid;
+    if (rounded >= originalPrice) return HappyHourFieldError.priceTooHigh;
     return null;
   }
 

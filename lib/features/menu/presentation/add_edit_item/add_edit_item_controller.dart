@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/utils/money.dart';
 import '../../../auth/data/models/partner_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../data/models/food_item.dart';
@@ -217,7 +218,9 @@ class AddEditItemController
     if (state.isHappyHour) {
       final hpText = happyHourPrice.trim();
       final basePrice = double.tryParse(price) ?? 0.0;
-      final hpPrice = double.tryParse(hpText);
+      final hpParsed = double.tryParse(hpText);
+      // Checked as it will be saved: rounded to the money step (50 millimes).
+      final hpPrice = hpParsed == null ? null : roundMoney(hpParsed);
       if (hpText.isEmpty || hpPrice == null || hpPrice <= 0) {
         return ItemSaveProblem.happyHourPriceInvalid;
       }
@@ -276,8 +279,10 @@ class AddEditItemController
         isVegetarian: state.isVegetarian,
         isSpicy: state.isSpicy,
         isHappyHour: state.isHappyHour,
-        happyHourPrice:
-            state.isHappyHour ? double.tryParse(f.happyHourPrice) : null,
+        // Rounded to the money step, as the database stores it.
+        happyHourPrice: state.isHappyHour
+            ? _roundedOrNull(double.tryParse(f.happyHourPrice))
+            : null,
         happyHourStart: state.isHappyHour ? _formatTime(state.happyHourStart) : null,
         happyHourEnd: state.isHappyHour ? _formatTime(state.happyHourEnd) : null,
       );
@@ -431,6 +436,8 @@ class AddEditItemController
   }
 
   // ── Rules ─────────────────────────────────────────────────────────────────
+
+  static double? _roundedOrNull(double? v) => v == null ? null : roundMoney(v);
 
   static ItemPriceError? validatePrice(String? v) {
     if (v == null || v.isEmpty) return ItemPriceError.missing;
